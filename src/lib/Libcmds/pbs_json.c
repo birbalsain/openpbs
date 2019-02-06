@@ -234,7 +234,13 @@ add_json_node(JsonNodeType ntype, JsonValueType vtype, JsonEscapeType esc_type, 
 				node->value.inumber = ivalue;
 			} else {
 				node->value_type = JSON_FLOAT;
-				node->value.fnumber = val;
+			       if (value != NULL) {
+                        ptr = strdup_escape(esc_type, value);
+                        if (ptr == NULL)
+                                return NULL;
+                }
+                node->value.string = ptr;
+
 			}
 		} else
 			node->value_type = JSON_STRING;
@@ -245,7 +251,8 @@ add_json_node(JsonNodeType ntype, JsonValueType vtype, JsonEscapeType esc_type, 
 			node->value.inumber = *((long int *)value);
 		else if (node->value_type == JSON_FLOAT)
 			node->value.fnumber = *((double *)value);
-	}
+                }
+                
 
 
 	if (node->value_type == JSON_STRING) {
@@ -403,9 +410,9 @@ generate_json(FILE * stream) {
 
 
 				if (arr_lvl[curnt_arr_lvl] == indent)
-					fprintf(stream, "%*.*s%lf",indent,indent," ", node->value.fnumber);
+					fprintf(stream, "%*.*s%s",indent,indent," ", node->value.string);      /*print the string but type remain same*/
 				else
-					fprintf(stream, "%*.*s\"%s\":%lf", indent, indent, " ", node->key, node->value.fnumber);
+					fprintf(stream, "%*.*s\"%s\":%s", indent, indent, " ", node->key, node->value.string); /* print the string but type remain same*/
 				prnt_comma = 1;
 				break;
 
