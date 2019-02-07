@@ -7,7 +7,7 @@ typedef enum {
 	JSON_STRING,
 	JSON_INT,
 	JSON_BIGINT,
-        JSON_FLOAT
+    JSON_FLOAT
 }JsonValueType;
 
 typedef enum {
