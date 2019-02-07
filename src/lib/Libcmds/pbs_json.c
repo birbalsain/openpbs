@@ -429,7 +429,7 @@ generate_json(FILE * stream) {
                 		else
                     			fprintf(stream, "%*.*s\"%s\":%lf", indent, indent, " ", node->key, node->value.fnumber);
                 		prnt_comma = 1;
-                	break;
+                 		break;
 
 
 			case JSON_NULL:
