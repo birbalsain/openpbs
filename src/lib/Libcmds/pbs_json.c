@@ -231,20 +231,22 @@ add_json_node(JsonNodeType ntype, JsonValueType vtype, JsonEscapeType esc_type, 
 			ivalue = (long int) val;
 			if (val == ivalue) {/* This checks if value have any non zero fractional part after decimal. If not then value has to be represented as integer otherwise as float. */
 				node->value_type = JSON_INT;
-				node->value.inumber = ivalue;}
-                        else{
+				node->value.inumber = ivalue;
+			}
+            else{
 				node->value_type = JSON_BIGINT;
 				if (value != NULL) {
                                    ptr = strdup_escape(esc_type, value);
                                    if (ptr == NULL)
-                                      return NULL; }
-                                node->value.string = ptr;
+                                      return NULL; 
+				}
+                                   node->value.string = ptr;
 
-         		     }
-               		}
-                else
-			node->value_type = JSON_STRING;
-                	}
+         	}
+        }
+        else
+			       node->value_type = JSON_STRING;
+    }
 	else {
 		node->value_type = vtype;
 		if (node->value_type == JSON_INT)
@@ -283,7 +285,7 @@ free_json_node() {
 
 	JsonLink *link = head;
 	while (link != NULL) {
-		if (link->node->value_type == JSON_STRING) {
+		if ((link->node->value_type == JSON_STRING) || (link->node->value_type == JSON_BIGINT )) {
 			if (link->node->value.string != NULL)
 				free(link->node->value.string);
 		}
@@ -414,19 +416,19 @@ generate_json(FILE * stream) {
 					fprintf(stream, "%*.*s\"%s\":%s", indent, indent, " ", node->key, node->value.string);
 				prnt_comma = 1;
 				break;
-                        case JSON_FLOAT:
-                                if (prnt_comma)
-                                        fprintf(stream, ",\n");
-                                else
-                                        fprintf(stream, "\n");
+            case JSON_FLOAT:
+                if (prnt_comma)
+                    fprintf(stream, ",\n");
+                else
+                    fprintf(stream, "\n");
 
 
-                                if (arr_lvl[curnt_arr_lvl] == indent)
-                                        fprintf(stream, "%*.*s%lf",indent,indent," ", node->value.fnumber);
-                                else
-                                        fprintf(stream, "%*.*s\"%s\":%lf", indent, indent, " ", node->key, node->value.fnumber);
-                                prnt_comma = 1;
-                                break;
+                if (arr_lvl[curnt_arr_lvl] == indent)
+                    fprintf(stream, "%*.*s%lf",indent,indent," ", node->value.fnumber);
+                else
+                    fprintf(stream, "%*.*s\"%s\":%lf", indent, indent, " ", node->key, node->value.fnumber);
+                    prnt_comma = 1;
+                break;
 
 
 			case JSON_NULL:
