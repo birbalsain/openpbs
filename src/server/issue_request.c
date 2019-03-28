@@ -491,6 +491,17 @@ issue_Drequest(int conn,
 				&msgid);
 			break;
 
+		case PBS_BATCH_reqinfo:
+			rc =  PBSD_reqinfo(conn,
+				request->rq_ind.rq_reqinfo.rq_jid,
+				request->rq_ind.rq_reqinfo.rq_info,
+				request->rq_ind.rq_reqinfo.rq_Port,
+				request->rq_ind.rq_reqinfo.rq_IPadd,
+				NULL,
+				rpp,
+				&msgid);
+			break;	
+
 		case PBS_BATCH_RelnodesJob:
 			rc =  PBSD_relnodes_put(conn,
 				request->rq_ind.rq_relnodes.rq_jid,

@@ -266,6 +266,7 @@ extern void  req_relnodesjob(struct batch_request *preq);
 extern void  req_modifyjob(struct batch_request *preq);
 extern void  req_modifyReservation(struct batch_request *preq);
 extern void  req_orderjob(struct batch_request *req);
+extern void  req_reqinfo(struct batch_request *preq);
 extern void  req_rescreserve(struct batch_request *preq);
 extern void  req_rescfree(struct batch_request *preq);
 extern void  req_shutdown(struct batch_request *preq);

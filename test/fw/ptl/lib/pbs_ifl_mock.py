@@ -430,6 +430,9 @@ def pbs_orderjob(c, jobid1, jobid2, extend):
     pass
 
 
+def pbs_reqinfo(c, jobid, file, port, IPadd, extend):
+    pass
+
 def pbs_rerunjob(c, jobid, extend):
     pass
 

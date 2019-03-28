@@ -579,6 +579,10 @@ dis_request_read(int sfds, struct batch_request *request)
 			rc = decode_DIS_MessageJob(sfds, request);
 			break;
 
+		case PBS_BATCH_reqinfo:
+		    rc = decode_DIS_reqinfo(sfds, request);
+			break;
+
 		case PBS_BATCH_Shutdown:
 		case PBS_BATCH_FailOver:
 			rc = decode_DIS_ShutDown(sfds, request);
@@ -714,6 +718,7 @@ dis_request_read(int sfds, struct batch_request *request)
 		default:
 			sprintf(log_buffer, "%s: %d from %s", msg_nosupport,
 				request->rq_type, request->rq_user);
+				
 			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_REQUEST, LOG_DEBUG,
 				"?", log_buffer);
 			rc = PBSE_UNKREQ;
@@ -722,6 +727,7 @@ dis_request_read(int sfds, struct batch_request *request)
 
 	if (rc == 0) {	/* Decode the Request Extension, if present */
 		rc = decode_DIS_ReqExtend(sfds, request);
+		
 		if (rc != 0) {
 			(void)sprintf(log_buffer,
 				"Request type: %d Req Extension bad, dis error %d", request->rq_type, rc);

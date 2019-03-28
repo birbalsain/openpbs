@@ -121,6 +121,7 @@ char *msg_request	= "Type %d request received from %s@%s, sock=%d";
 char *msg_regrej	= "Dependency request for job rejected by ";
 char *msg_registerdel	= "Job deleted as result of dependency on job %s";
 char *msg_registerrel	= "Dependency on job %s released.";
+char *msg_reqinfo	= "qview request for running job %s";
 char *msg_routexceed	= "Route queue lifetime exceeded";
 char *msg_script_open	= "Unable to open script file";
 char *msg_script_write	= "Unable to write script file";

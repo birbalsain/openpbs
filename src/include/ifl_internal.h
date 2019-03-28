@@ -79,6 +79,8 @@ extern int __pbs_orderjob(int, char *, char *, char *);
 
 extern int __pbs_rerunjob(int, char *, char *);
 
+extern int __pbs_reqinfo(int, char *, int, int, char *, char *);
+
 extern int __pbs_rlsjob(int, char *, char *, char *);
 
 extern int __pbs_runjob(int, char *, char *, char *);

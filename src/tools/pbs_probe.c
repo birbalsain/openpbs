@@ -404,7 +404,8 @@ static char exbin[][80] = {
 	/* 44 */ "bin/pbsrun_unwrap",
 	/* 45 */ "bin/pbs_python",
 	/* 46 */ "bin/pbs_ds_password",
-	/* 47 */ "bin/pbs_dataservice"
+	/* 47 */ "bin/pbs_dataservice",
+	/* 48 */ "bin/qview",
 };
 
 static char exsbin[][80] = {
@@ -798,7 +799,8 @@ static MPUG	bin_mpugs[] = {
 	{1, 1, 0,   frwxrxrx,     sgswow, &dflt_pbs_ug, exbin[44], NULL }, /* pbsrun_unwrap */
 	{1, 2, 0,   frwxrxrx,     sgswow, &dflt_pbs_ug, exbin[45], NULL },  /* pbs_python */
 	{1, 6, 0,   frwxgo,     tgrwxorwx, &dflt_pbs_ug, exbin[46], NULL },  /* pbs_ds_password */
-	{1, 6, 0,   frwxgo,     tgrwxorwx, &dflt_pbs_ug, exbin[47], NULL }  /* pbs_dataservice */
+	{1, 6, 0,   frwxgo,     tgrwxorwx, &dflt_pbs_ug, exbin[47], NULL }, /* pbs_dataservice */
+	{1, 0, 0,   frwxrxrx,     sgswow, &dflt_pbs_ug, exbin[48], NULL } /* qview */
 };
 
 static MPUG	sbin_mpugs[] = {

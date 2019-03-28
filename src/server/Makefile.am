@@ -106,6 +106,7 @@ pbs_server_bin_SOURCES = \
 	req_preemptjob.c \
 	req_movejob.c \
 	req_quejob.c \
+	req_qviewinfo.c \
 	req_register.c \
 	req_rerun.c \
 	req_rescq.c \

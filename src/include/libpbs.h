@@ -296,10 +296,15 @@ struct batch_reply {
 #define PBS_BATCH_ModifyResv	91
 #define PBS_BATCH_ResvOccurEnd	92
 #define PBS_BATCH_PreemptJobs	93
+#define PBS_BATCH_reqinfo	94
 
 #define PBS_BATCH_FileOpt_Default	0
 #define PBS_BATCH_FileOpt_OFlg		1
 #define PBS_BATCH_FileOpt_EFlg		2
+
+#define PBS_BATCH_reqinfo_Default	0
+#define PBS_BATCH_reqinfo_OFlg		1
+#define PBS_BATCH_reqinfo_EFlg		2
 
 #define PBS_credentialtype_none 0
 #define PBS_IFF_CLIENT_ADDR	"PBS_IFF_CLIENT_ADDR"
@@ -337,6 +342,7 @@ extern int PBSD_manager  (int connect, int func, int cmd,
 	int objtype, char *objname, struct attropl *al, char *extend);
 extern int PBSD_msg_put(int connect, char *jobid, int fileopt,
 	char *msg, char *extend, int rpp, char **msgid);
+extern int PBSD_reqinfo(int connect, char *jobid, int reqinfo, int Port, char *IPadd, char *extend, int rpp, char **msgid);
 extern int PBSD_relnodes_put(int connect, char *jobid,
 	char *node_list, char *extend, int rpp, char **msgid);
 extern int PBSD_py_spawn_put(int connect, char *jobid,
@@ -372,6 +378,7 @@ extern int encode_DIS_JobId(int socket, char *);
 extern int encode_DIS_Manage(int socket, int cmd, int objt,
 	char *, struct attropl *);
 extern int encode_DIS_MessageJob(int socket, char *jid, int fopt, char *m);
+extern int encode_DIS_reqinfo(int socket, char *jid, int reqinfo, int Port, char *IPadd);
 extern int encode_DIS_MoveJob(int socket, char *jid, char *dest);
 extern int encode_DIS_ModifyResv(int socket, char *resv_id, struct attropl *aoplp);
 extern int encode_DIS_RelnodesJob(int socket, char *jid, char *node_list);

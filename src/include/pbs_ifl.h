@@ -437,17 +437,21 @@ enum mgr_obj {
 #define MSG_OUT		1
 #define MSG_ERR		2
 
+#define jobout		1
+#define joberr		2
+
 
 #define BLUEGENE		"bluegene"
 /* SUSv2 guarantees that host names are limited to 255 bytes */
 #define PBS_MAXHOSTNAME		255	/* max host name length */
+#define MAXIP	255 /* max ip size */
 #ifndef MAXPATHLEN
 #define MAXPATHLEN		1024		/* max path name length */
 #endif
 #ifndef MAXNAMLEN
 #define MAXNAMLEN		255
 #endif
-#define PBS_MAXSCHEDNAME 	15
+#define PBS_MAXSCHEDNAME   	15
 #define PBS_MAXUSER		256		/* max user name length */
 #define PBS_MAXPWLEN		256		/* max password length */
 #define PBS_MAXGRPN		256		/* max group name length */
@@ -584,6 +588,7 @@ DECLDIR char *__pbs_server_location(void);
 #define pbs_server (__pbs_server_location ())
 #endif
 
+
 DECLDIR int pbs_asyrunjob(int, char *, char *, char *);
 
 DECLDIR int pbs_alterjob(int, char *, struct attrl *, char *);
@@ -609,6 +614,8 @@ DECLDIR int pbs_manager(int, int, int, char *, struct attropl *, char *);
 DECLDIR int pbs_movejob(int, char *, char *, char *);
 
 DECLDIR int pbs_msgjob(int, char *, int, char *, char *);
+
+DECLDIR int pbs_reqinfo(int, char *, int, int, char *, char *);
 
 DECLDIR int pbs_relnodesjob(int, char *, char *, char *);
 
@@ -710,6 +717,8 @@ extern int pbs_relnodesjob(int, char *,  char *, char *);
 
 extern int pbs_orderjob(int, char *, char *, char *);
 
+extern int pbs_reqinfo(int, char *, int, int, char*, char *);
+
 extern int pbs_rerunjob(int, char *, char *);
 
 extern int pbs_rlsjob(int, char *, char *, char *);
@@ -776,6 +785,7 @@ extern int (*pfn_pbs_manager)(int, int, int, char *, struct attropl *, char *);
 extern int (*pfn_pbs_movejob)(int, char *, char *, char *);
 extern int (*pfn_pbs_msgjob)(int, char *, int, char *, char *);
 extern int (*pfn_pbs_orderjob)(int, char *, char *, char *);
+extern int (*pfn_pbs_reqinfo)(int, char *, int, int ,char *, char *);
 extern int (*pfn_pbs_rerunjob)(int, char *, char *);
 extern int (*pfn_pbs_rlsjob)(int, char *, char *, char *);
 extern int (*pfn_pbs_runjob)(int, char *, char *, char *);

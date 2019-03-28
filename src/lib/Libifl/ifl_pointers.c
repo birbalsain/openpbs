@@ -57,6 +57,7 @@ int (*pfn_pbs_manager)(int, int, int, char *, struct attropl *, char *) = __pbs_
 int (*pfn_pbs_movejob)(int, char *, char *, char *) = __pbs_movejob;
 int (*pfn_pbs_msgjob)(int, char *, int, char *, char *) = __pbs_msgjob;
 int (*pfn_pbs_orderjob)(int, char *, char *, char *) = __pbs_orderjob;
+int (*pfn_pbs_reqinfo)(int, char *, int, int, char *,char *) = __pbs_reqinfo;
 int (*pfn_pbs_rerunjob)(int, char *, char *) = __pbs_rerunjob;
 int (*pfn_pbs_rlsjob)(int, char *, char *, char *) = __pbs_rlsjob;
 int (*pfn_pbs_runjob)(int, char *, char *, char *) = __pbs_runjob;

@@ -163,6 +163,16 @@ struct rq_relnodes  {
 	char	*rq_node_list;
 };
 
+/* Request information */
+
+struct rq_reqinfo  {
+	int	 rq_info;
+    int rq_Port; 
+	char	 rq_jid[PBS_MAXSVRJOBID+1];
+	char	*rq_IPadd; 
+	
+};
+
 /* PySpawn */
 
 struct rq_py_spawn  {
@@ -344,6 +354,7 @@ struct batch_request {
 		struct rq_manage	rq_manager;
 		struct rq_message	rq_message;
 		struct rq_relnodes	rq_relnodes;
+		struct rq_reqinfo	rq_reqinfo;
 		struct rq_py_spawn	rq_py_spawn;
 		struct rq_manage	rq_modify;
 		struct rq_move		rq_move;
@@ -443,6 +454,7 @@ extern int decode_DIS_Register(int socket, struct batch_request *);
 extern int decode_DIS_RelnodesJob(int socket, struct batch_request *);
 extern int decode_DIS_ReqExtend(int socket, struct batch_request *);
 extern int decode_DIS_ReqHdr(int socket, struct batch_request *, int *tp, int *pv);
+extern int decode_DIS_reqinfo(int socket, struct batch_request *);
 extern int decode_DIS_Rescl(int socket, struct batch_request *);
 extern int decode_DIS_Rescq(int socket, struct batch_request *);
 extern int decode_DIS_Run(int socket, struct batch_request *);

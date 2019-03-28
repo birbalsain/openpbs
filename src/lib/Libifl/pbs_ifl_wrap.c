@@ -5188,6 +5188,85 @@ fail:
   return NULL;
 }
 
+SWIGINTERN PyObject *pbs_reqinfo(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  char *arg2 = NULL;
+  int arg3 ;
+  int arg4 ;
+  char *arg5 = NULL;
+  char *arg6 = NULL;
+ 
+  int val1 ;
+  int ecode1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+   int val4 ;
+  int ecode4 = 0 ;
+  int res5 ;
+  char *buf5 = 0 ;
+  int alloc5 = 0 ;
+  int res6 ;
+  char *buf6 = 0 ;
+  int alloc6 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+
+  int result;
+
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:pbs_reqinfo",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "pbs_reqinfo" "', argument " "1"" of type '" "int""'");
+  }
+  arg1 = (int)(val1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "pbs_reqinfo" "', argument " "2"" of type '" "char *""'");
+  }
+  arg2 = (char *)(buf2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "pbs_reqinfo" "', argument " "3"" of type '" "int""'");
+  }
+  arg3 = (int)(val3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "pbs_reqinfo" "', argument " "4"" of type '" "int""'");
+  }
+  arg4 = (int)(val4);
+  res5 = SWIG_AsCharPtrAndSize(obj4, &buf5, NULL, &alloc5);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "pbs_reqinfo" "', argument " "5"" of type '" "char *""'");
+  }
+  arg5 = (char *)(buf5);
+  res6 = SWIG_AsCharPtrAndSize(obj5, &buf6, NULL, &alloc6);
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "pbs_reqinfo" "', argument " "6"" of type '" "char *""'");
+  }
+  arg6 = (char *)(buf6);
+
+  result = (int)pbs_reqinfo(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_From_int((int)(result));
+  if (alloc2 == SWIG_NEWOBJ) free((char*)buf2);
+  if (alloc4 == SWIG_NEWOBJ) free((char*)buf5);
+  if (alloc4 == SWIG_NEWOBJ) free((char*)buf6);
+  
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) free((char*)buf2);
+  if (alloc4 == SWIG_NEWOBJ) free((char*)buf5);
+  if (alloc4 == SWIG_NEWOBJ) free((char*)buf6);
+  
+  return NULL;
+}
 
 SWIGINTERN PyObject *_wrap_pbs_rerunjob(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
@@ -6343,6 +6422,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"pbs_movejob", _wrap_pbs_movejob, METH_VARARGS, NULL},
 	 { (char *)"pbs_msgjob", _wrap_pbs_msgjob, METH_VARARGS, NULL},
 	 { (char *)"pbs_orderjob", _wrap_pbs_orderjob, METH_VARARGS, NULL},
+    { (char *)"pbs_reqinfo", _wrap_pbs_reqinfo, METH_VARARGS, NULL},
 	 { (char *)"pbs_rerunjob", _wrap_pbs_rerunjob, METH_VARARGS, NULL},
 	 { (char *)"pbs_rlsjob", _wrap_pbs_rlsjob, METH_VARARGS, NULL},
 	 { (char *)"pbs_runjob", _wrap_pbs_runjob, METH_VARARGS, NULL},

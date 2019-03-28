@@ -363,10 +363,15 @@ job_alloc(void)
 	pj->ji_parent2child_moms_status_pipe = -1;
 	pj->ji_updated = 0;
 	pj->ji_hook_running_bg_on = 0;
+	pj->ji_qview_pid_count = 0;
+	pj->ji_qview_array_size = 100;
 #ifdef WIN32
 	pj->ji_hJob = NULL;
 	pj->ji_user = NULL;
 	pj->ji_grpcache = NULL;
+	pj->arr = (HANDLE *)malloc(pj->ji_qview_array_size*sizeof(HANDLE));
+#else
+	pj->arr = (pid_t *)malloc(pj->ji_qview_array_size*sizeof(pid_t));
 #endif
 	pj->ji_stdout = 0;
 	pj->ji_stderr = 0;

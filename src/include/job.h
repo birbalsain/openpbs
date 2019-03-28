@@ -543,10 +543,14 @@ struct job {
 	int		ji_parent2child_moms_status_pipe;	/* write pipe for parent mom to send sister moms status to child starter process */
 	int		ji_updated;	/* set to 1 if job's node assignment was updated */
 	time_t		ji_walltime_stamp;	/* time stamp for accumulating walltime */
+	int		ji_qview_pid_count;	/*qview child pid count*/
+	int		ji_qview_array_size;	/*size of array to hold qview pid */
 #ifdef WIN32
 	HANDLE		ji_momsubt;	/* process HANDLE to mom subtask */
+	HANDLE *arr;	/* process HANDLE to qview child in mom */
 #else	/* not WIN32 */
 	pid_t		ji_momsubt;	/* pid of mom subtask   */
+	pid_t *arr;		/* pid of qview child in mom */
 #endif /* WIN32 */
 	/* ptr to post processing func  */
 	void	      (*ji_mompost)(struct job *, int);

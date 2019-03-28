@@ -158,6 +158,7 @@ libpbs_la_SOURCES = \
 	../Libifl/dec_Reg.c \
 	../Libifl/dec_ReqExt.c \
 	../Libifl/dec_ReqHdr.c \
+	../Libifl/dec_reqinfo.c \
 	../Libifl/dec_Resc.c \
 	../Libifl/dec_RunJob.c \
 	../Libifl/dec_Shut.c \
@@ -184,6 +185,7 @@ libpbs_la_SOURCES = \
 	../Libifl/enc_Reg.c \
 	../Libifl/enc_ReqExt.c \
 	../Libifl/enc_ReqHdr.c \
+	../Libifl/enc_reqinfo.c \
 	../Libifl/enc_RunJob.c \
 	../Libifl/enc_Shut.c \
 	../Libifl/enc_Sig.c \
@@ -206,6 +208,7 @@ libpbs_la_SOURCES = \
 	../Libifl/int_manage2.c \
 	../Libifl/int_msg2.c \
 	../Libifl/int_rdrpy.c \
+	../Libifl/int_reqinfo.c \
 	../Libifl/int_sig2.c \
 	../Libifl/int_status2.c \
 	../Libifl/int_submit.c \
@@ -234,6 +237,7 @@ libpbs_la_SOURCES = \
 	../Libifl/pbsD_movejob.c \
 	../Libifl/pbsD_msgjob.c \
 	../Libifl/pbsD_orderjo.c \
+	../Libifl/pbsD_reqinfo.c \
 	../Libifl/pbsD_rerunjo.c \
 	../Libifl/pbsD_resc.c \
 	../Libifl/pbsD_rlsjob.c \

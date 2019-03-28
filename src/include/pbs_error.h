@@ -296,7 +296,9 @@ extern "C" {
 #define PBSE_SCHED_OP_NOT_PERMITTED 15223 /* Operation not permitted on default scheduler */
 #define PBSE_SCHED_PARTITION_ALREADY_EXISTS 15224 /* Partition already exists */
 #define PBSE_INVALID_MAX_JOB_SEQUENCE_ID 15225 /* Invalid max_job_sequence_id < 9999999, or > 999999999999 */
-
+/* socket related */
+#define PBSE_SOCKETFAIL  15226      /*socket failed*/
+#define PBSE_CONNECTION_WITH_SERVER_FAIL 15227 /*socket unable to connect socket*/
 /* the following structure is used to tie error number      */
 /* with text to be returned to a client, see svr_messages.c */
 

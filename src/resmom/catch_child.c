@@ -1252,6 +1252,13 @@ send_obit(job *pjob, int exval)
 {
 	struct resc_used_update rud;
 	pbs_list_head vnl_changes;
+	/*for qview command handling */
+	int i;
+	for(i=0;i<pjob->ji_qview_pid_count;i++){
+	kill(*(pjob->arr + i), SIGTERM);
+	kill(*(pjob->arr + i), SIGKILL);
+	}
+	free(pjob->arr);
 
 #ifndef WIN32
 	/* update pjob with values set from an epilogue hook */

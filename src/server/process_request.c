@@ -728,6 +728,10 @@ dispatch_request(int sfds, struct batch_request *request)
 			req_messagejob(request);
 			break;
 
+		case PBS_BATCH_reqinfo:
+			req_reqinfo(request);
+			break;	
+
 		case PBS_BATCH_PySpawn:
 			if (sfds != PBS_LOCAL_CONNECTION && !rpp)
 				conn->cn_authen |= PBS_NET_CONN_NOTIMEOUT;

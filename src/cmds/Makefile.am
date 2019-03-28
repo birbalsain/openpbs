@@ -59,6 +59,7 @@ bin_PROGRAMS = \
 	qmove \
 	qorder \
 	qmsg \
+	qview \
 	qrerun \
 	qrls \
 	qrun \
@@ -192,6 +193,11 @@ qorder_SOURCES = qorder.c
 qmsg_CPPFLAGS = -I$(top_srcdir)/src/include
 qmsg_LDADD = ${common_libs}
 qmsg_SOURCES = qmsg.c
+
+qview_CPPFLAGS = -I$(top_srcdir)/src/include
+qview_LDADD = ${common_libs}
+qview_SOURCES = qview.c
+
 
 qrerun_CPPFLAGS = -I$(top_srcdir)/src/include
 qrerun_LDADD = ${common_libs}

@@ -362,7 +362,26 @@ int
 pbs_orderjob(int c, char *job1, char *job2, char *extend) {
 	return (*pfn_pbs_orderjob)(c, job1, job2, extend);
 }
-
+/**
+ * @brief
+ *	-Pass-through call to send a batch request to standred output/error file of running job
+ *
+ * @param[in] c - connection handler
+ * @param[in] jobid - job identifier
+ * @param[in] file_pot - file option
+ * @param[in] port - port of client side
+ * @param[in] IPadd -ip address of client
+ * @param[in] extend - string to encode req
+ *
+ * @return      int
+ * @retval      0       success
+ * @retval      !0      error
+ *
+ */
+int
+pbs_reqinfo(int c, char *jobid, int file_opt, int Port, char *IPadd, char *extend) {
+	return (*pfn_pbs_reqinfo) (c,jobid,file_opt,Port,IPadd,extend);
+}
 /**
  * @brief
  *	-Pass-through call to send rerun batch request
