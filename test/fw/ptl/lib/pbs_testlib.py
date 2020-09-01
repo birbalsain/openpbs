@@ -226,6 +226,15 @@ CMD_ERROR_MAP = {
     'alterresv': 'PbsResvAlterError'
 }
 
+from ptl.lib.ptl_exception import *
+from ptl.lib.pbs_error import *
+from ptl.lib.expect_action import *
+from ptl.lib.pbs_type import *
+from ptl.lib.batch_utils import *
+from ptl.lib.pbsobject import *
+from ptl.lib.pbs_init_service import *
+
+
 
 class PtlConfig(object):
 
@@ -307,2543 +316,6 @@ class PtlConfig(object):
                 os.environ[k] = str(v)
             if k in self.handlers:
                 self.handlers[k](v)
-
-
-class PtlException(Exception):
-
-    """
-    Generic errors raised by PTL operations.
-    Sets a ``return value``, a ``return code``, and a ``message``
-    A post function and associated positional and named arguments
-    are available to perform any necessary cleanup.
-
-    :param rv: Return value set for the error occured during PTL
-               operation
-    :type rv: int or None.
-    :param rc: Return code set for the error occured during PTL
-               operation
-    :type rc: int or None.
-    :param msg: Message set for the error occured during PTL operation
-    :type msg: str or None.
-    :param post: Execute given post callable function if not None.
-    :type post: callable or None.
-    :raises: PTL exceptions
-    """
-
-    def __init__(self, rv=None, rc=None, msg=None, post=None, *args, **kwargs):
-        self.rv = rv
-        self.rc = rc
-        self.msg = msg
-        if post is not None:
-            post(*args, **kwargs)
-
-    def __str__(self):
-        return ('rc=' + str(self.rc) + ', rv=' + str(self.rv) +
-                ', msg=' + str(self.msg))
-
-    def __repr__(self):
-        return (self.__class__.__name__ + '(rc=' + str(self.rc) + ', rv=' +
-                str(self.rv) + ', msg=' + str(self.msg) + ')')
-
-
-class PtlFailureException(AssertionError):
-
-    """
-    Generic failure exception raised by PTL operations.
-    Sets a ``return value``, a ``return code``, and a ``message``
-    A post function and associated positional and named arguments
-    are available to perform any necessary cleanup.
-
-    :param rv: Return value set for the failure occured during PTL
-               operation
-    :type rv: int or None.
-    :param rc: Return code set for the failure occured during PTL
-               operation
-    :type rc: int or None.
-    :param msg: Message set for the failure occured during PTL operation
-    :type msg: str or None.
-    :param post: Execute given post callable function if not None.
-    :type post: callable or None.
-    :raises: PTL exceptions
-    """
-
-    def __init__(self, rv=None, rc=None, msg=None, post=None, *args, **kwargs):
-        self.rv = rv
-        self.rc = rc
-        self.msg = msg
-        if post is not None:
-            post(*args, **kwargs)
-
-    def __str__(self):
-        return ('rc=' + str(self.rc) + ', rv=' + str(self.rv) +
-                ', msg=' + str(self.msg))
-
-    def __repr__(self):
-        return (self.__class__.__name__ + '(rc=' + str(self.rc) + ', rv=' +
-                str(self.rv) + ', msg=' + str(self.msg) + ')')
-
-
-class PbsServiceError(PtlException):
-    pass
-
-
-class PbsConnectError(PtlException):
-    pass
-
-
-class PbsStatusError(PtlException):
-    pass
-
-
-class PbsSubmitError(PtlException):
-    pass
-
-
-class PbsManagerError(PtlException):
-    pass
-
-
-class PbsDeljobError(PtlException):
-    pass
-
-
-class PbsDelresvError(PtlException):
-    pass
-
-
-class PbsDeleteError(PtlException):
-    pass
-
-
-class PbsRunError(PtlException):
-    pass
-
-
-class PbsSignalError(PtlException):
-    pass
-
-
-class PbsMessageError(PtlException):
-    pass
-
-
-class PbsHoldError(PtlException):
-    pass
-
-
-class PbsReleaseError(PtlException):
-    pass
-
-
-class PbsOrderError(PtlException):
-    pass
-
-
-class PbsRerunError(PtlException):
-    pass
-
-
-class PbsMoveError(PtlException):
-    pass
-
-
-class PbsAlterError(PtlException):
-    pass
-
-
-class PbsResourceError(PtlException):
-    pass
-
-
-class PbsSelectError(PtlException):
-    pass
-
-
-class PbsSchedConfigError(PtlException):
-    pass
-
-
-class PbsMomConfigError(PtlException):
-    pass
-
-
-class PbsFairshareError(PtlException):
-    pass
-
-
-class PbsQdisableError(PtlException):
-    pass
-
-
-class PbsQenableError(PtlException):
-    pass
-
-
-class PbsQstartError(PtlException):
-    pass
-
-
-class PbsQstopError(PtlException):
-    pass
-
-
-class PtlExpectError(PtlFailureException):
-    pass
-
-
-class PbsInitServicesError(PtlException):
-    pass
-
-
-class PbsQtermError(PtlException):
-    pass
-
-
-class PtlLogMatchError(PtlFailureException):
-    pass
-
-
-class PbsResvAlterError(PtlException):
-    pass
-
-
-class PbsTypeSize(str):
-
-    """
-    Descriptor class for memory as a numeric entity.
-    Units can be one of ``b``, ``kb``, ``mb``, ``gb``, ``tb``, ``pt``
-
-    :param unit: The unit type associated to the memory value
-    :type unit: str
-    :param value: The numeric value of the memory
-    :type value: int or None
-    :raises: ValueError and TypeError
-    """
-
-    def __init__(self, value=None):
-        if value is None:
-            return
-
-        if len(value) < 2:
-            raise ValueError
-
-        if value[-1:] in ('b', 'B') and value[:-1].isdigit():
-            self.unit = 'b'
-            self.value = int(int(value[:-1]) / 1024)
-            return
-
-        # lower() applied to ignore case
-        unit = value[-2:].lower()
-        self.value = value[:-2]
-        if not self.value.isdigit():
-            raise ValueError
-        if unit == 'kb':
-            self.value = int(self.value)
-        elif unit == 'mb':
-            self.value = int(self.value) * 1024
-        elif unit == 'gb':
-            self.value = int(self.value) * 1024 * 1024
-        elif unit == 'tb':
-            self.value = int(self.value) * 1024 * 1024 * 1024
-        elif unit == 'pb':
-            self.value = int(self.value) * 1024 * 1024 * 1024 * 1024
-        else:
-            raise TypeError
-        self.unit = 'kb'
-
-    def encode(self, value=None, valtype='kb', precision=1):
-        """
-        Encode numeric memory input in kilobytes to a string, including
-        unit
-
-        :param value: The numeric value of memory to encode
-        :type value: int or None.
-        :param valtype: The unit of the input value, defaults to kb
-        :type valtype: str
-        :param precision: Precision of the encoded value, defaults to 1
-        :type precision: int
-        :returns: Encoded memory in kb to string
-        """
-        if value is None:
-            value = self.value
-
-        if valtype == 'b':
-            val = value
-        elif valtype == 'kb':
-            val = value * 1024
-        elif valtype == 'mb':
-            val = value * 1024 * 1024
-        elif valtype == 'gb':
-            val = value * 1024 * 1024 * 1024 * 1024
-        elif valtype == 'tb':
-            val = value * 1024 * 1024 * 1024 * 1024 * 1024
-        elif valtype == 'pt':
-            val = value * 1024 * 1024 * 1024 * 1024 * 1024 * 1024
-
-        m = (
-            (1 << 50, 'pb'),
-            (1 << 40, 'tb'),
-            (1 << 30, 'gb'),
-            (1 << 20, 'mb'),
-            (1 << 10, 'kb'),
-            (1, 'b')
-        )
-
-        for factor, suffix in m:
-            if val >= factor:
-                break
-
-        return '%.*f%s' % (precision, float(val) / factor, suffix)
-
-    def __cmp__(self, other):
-        if self.value < other.value:
-            return -1
-        if self.value == other.value:
-            return 0
-        return 1
-
-    def __lt__(self, other):
-        if self.value < other.value:
-            return True
-        return False
-
-    def __le__(self, other):
-        if self.value <= other.value:
-            return True
-        return False
-
-    def __gt__(self, other):
-        if self.value > other.value:
-            return True
-        return False
-
-    def __ge__(self, other):
-        if self.value < other.value:
-            return True
-        return False
-
-    def __eq__(self, other):
-        if self.value == other.value:
-            return True
-        return False
-
-    def __get__(self):
-        return self.value
-
-    def __add__(self, other):
-        if isinstance(other, int):
-            self.value += other
-        else:
-            self.value += other.value
-        return self
-
-    def __mul__(self, other):
-        if isinstance(other, int):
-            self.value *= other
-        else:
-            self.value *= other.value
-        return self
-
-    def __floordiv__(self, other):
-        self.value /= other.value
-        return self
-
-    def __sub__(self, other):
-        self.value -= other.value
-        return self
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        return self.encode(valtype=self.unit)
-
-
-class PbsTypeDuration(str):
-
-    """
-    Descriptor class for a duration represented as ``hours``,
-    ``minutes``, and ``seconds``,in the form of ``[HH:][MM:]SS``
-
-    :param as_seconds: HH:MM:SS represented in seconds
-    :type as_seconds: int
-    :param as_str: duration represented in HH:MM:SS
-    :type as_str: str
-    """
-
-    def __init__(self, val):
-        if isinstance(val, str):
-            if ':' in val:
-                s = val.split(':')
-                l = len(s)
-                if l > 3:
-                    raise ValueError
-                hr = mn = sc = 0
-                if l >= 2:
-                    sc = s[l - 1]
-                    mn = s[l - 2]
-                    if l == 3:
-                        hr = s[0]
-                self.duration = int(hr) * 3600 + int(mn) * 60 + int(sc)
-            elif val.isdigit():
-                self.duration = int(val)
-        elif isinstance(val, int) or isinstance(val, float):
-            self.duration = val
-
-    def __add__(self, other):
-        self.duration += other.duration
-        return self
-
-    def __sub__(self, other):
-        self.duration -= other.duration
-        return self
-
-    def __cmp__(self, other):
-        if self.duration < other.duration:
-            return -1
-        if self.duration == other.duration:
-            return 0
-        return 1
-
-    def __lt__(self, other):
-        if self.duration < other.duration:
-            return True
-        return False
-
-    def __le__(self, other):
-        if self.duration <= other.duration:
-            return True
-        return False
-
-    def __gt__(self, other):
-        if self.duration > other.duration:
-            return True
-        return False
-
-    def __ge__(self, other):
-        if self.duration < other.duration:
-            return True
-        return False
-
-    def __eq__(self, other):
-        if self.duration == other.duration:
-            return True
-        return False
-
-    def __get__(self):
-        return self.as_str
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __int__(self):
-        return int(self.duration)
-
-    def __str__(self):
-        return str(datetime.timedelta(seconds=self.duration))
-
-
-class PbsTypeArray(list):
-
-    """
-    Descriptor class for a PBS array list type, e.g. String array
-
-    :param value: Array value to be passed
-    :param sep: Separator for two array elements
-    :type sep: str
-    :returns: List
-    """
-
-    def __init__(self, value=None, sep=','):
-        self.separator = sep
-        self = list.__init__(self, value.split(sep))
-
-    def __str__(self):
-        return self.separator.join(self)
-
-
-class PbsTypeList(dict):
-
-    """
-    Descriptor class for a generic PBS list that are key/value pairs
-    delimited
-
-    :param value: List value to be passed
-    :param sep: Separator for two key/value pair
-    :type sep: str
-    :param kvsep: Separator for key and value
-    :type kvsep: str
-    :returns: Dictionary
-    """
-
-    def __init__(self, value=None, sep=',', kvsep='='):
-        self.kvsep = kvsep
-        self.separator = sep
-        d = {}
-        as_list = [v.split(kvsep) for v in value.split(sep)]
-        if as_list:
-            for k, v in as_list:
-                d[k] = v
-            del as_list
-        dict.__init__(self, d)
-
-    def __str__(self):
-        s = []
-        for k, v in self.items():
-            s += [str(k) + self.kvsep + str(v)]
-        return self.separator.join(s)
-
-
-class PbsTypeLicenseCount(PbsTypeList):
-
-    """
-    Descriptor class for a PBS license_count attribute.
-
-    It is a specialized list where key/values are ':' delimited, separated
-    by a ' ' (space)
-
-    :param value: PBS license_count attribute value
-    :returns: Specialized list
-    """
-
-    def __init__(self, value=None):
-        super(PbsTypeLicenseCount, self).__init__(value, sep=' ', kvsep=':')
-
-
-class PbsTypeVariableList(PbsTypeList):
-
-    """
-    Descriptor class for a PBS Variable_List attribute
-
-    It is a specialized list where key/values are '=' delimited, separated
-    by a ',' (space)
-
-    :param value: PBS Variable_List attribute value
-    :returns: Specialized list
-    """
-
-    def __init__(self, value=None):
-        super(PbsTypeVariableList, self).__init__(value, sep=',', kvsep='=')
-
-
-class PbsTypeSelect(list):
-
-    """
-    Descriptor class for PBS select/schedselect specification.
-    Select is of the form:
-
-    ``<select> ::= <m>":"<chunk> | <select>"+"<select>``
-
-    ``<m> ::= <digit> | <digit><m>``
-
-    ``<chunk> ::= <resc_name>":"<resc_value> | <chunk>":"<chunk>``
-
-    ``<m>`` is a multiplying factor for each chunk requested
-
-    ``<chunk>`` are resource key/value pairs
-
-    The type populates a list of single chunk of resource
-    ``key/value`` pairs, the list can be walked by iterating over
-    the type itself.
-
-    :param num_chunks: The total number of chunks in the select
-    :type num_chunk: int
-    :param resources: A dictionary of all resource counts in the select
-    :type resources: Dictionary
-    """
-
-    def __init__(self, s=None):
-        if s is not None:
-            self._as_str = s
-            self.resources = {}
-            self.num_chunks = 0
-            nc = s.split('+')
-            for chunk in nc:
-                self._parse_chunk(chunk)
-
-    def _parse_chunk(self, chunk):
-        d = chunk.split(':')
-        # number of chunks
-        _num_chunks = int(d[0])
-        self.num_chunks += _num_chunks
-        r = {}
-        for e in d[1:]:
-            k, v = e.split('=')
-            r[k] = v
-            if 'mem' in k:
-                try:
-                    v = PbsTypeSize(v).value
-                except:
-                    # failed so we guessed wrong on the type
-                    pass
-            if isinstance(v, int) or v.isdigit():
-                if k not in self.resources:
-                    self.resources[k] = _num_chunks * int(v)
-                else:
-                    self.resources[k] += _num_chunks * int(v)
-            else:
-                if k not in self.resources:
-                    self.resources[k] = v
-                else:
-                    self.resources[k] = [self.resources[k], v]
-
-        # explicitly expose the multiplying factor
-        for _ in range(_num_chunks):
-            self.append(r)
-
-    def __add__(self, chunk=None):
-        if chunk is None:
-            return self
-        self._parse_chunk(chunk)
-        self._as_str = self._as_str + "+" + chunk
-        return self
-
-    def __repr__(self):
-        return str(self)
-
-    def __str__(self):
-        return self._as_str
-
-
-class PbsTypeChunk(dict):
-
-    """
-    Descriptor class for a PBS chunk associated to a
-    ``PbsTypeExecVnode``.This type of chunk corresponds to
-    a node solution to a resource request,not to the select
-    specification.
-
-    ``chunk ::= <subchk> | <chunk>"+"<chunk>``
-
-    ``subchk ::= <node>":"<resource>``
-
-    ``resource ::= <key>":"<val> | <resource>":"<resource>``
-
-    A chunk expresses a solution to a specific select-chunk
-    request. If multiple chunks are needed to solve a single
-    select-chunk, e.g., on a shared memory system, the chunk
-    will be extended into virtual chunk,vchunk.
-
-    :param vnode: the vnode name corresponding to the chunk
-    :type vnode: str or None
-    :param resources: the key value pair of resources in
-                      dictionary form
-    :type resources: Dictionary or None
-    :param vchunk: a list of virtual chunks needed to solve
-                   the select-chunk, vchunk is only set if more
-                   than one vchunk are required to solve the
-                   select-chunk
-    :type vchunk: list
-    """
-
-    def __init__(self, vnode=None, resources=None, chunkstr=None):
-        self.vnode = vnode
-        if resources is not None:
-            self.resources = resources
-        else:
-            self.resources = {}
-        self.vchunk = []
-        self.as_str = chunkstr
-        self.__parse_chunk(chunkstr)
-
-    def __parse_chunk(self, chunkstr=None):
-        if chunkstr is None:
-            return
-
-        vchunks = chunkstr.split('+')
-        if len(vchunks) == 1:
-            entities = chunkstr.split(':')
-            self.vnode = entities[0]
-            if len(entities) > 1:
-                for e in entities[1:]:
-                    (r, v) = e.split('=')
-                    self.resources[r] = v
-            self[self.vnode] = self.resources
-        else:
-            for sc in vchunks:
-                chk = PbsTypeChunk(chunkstr=sc)
-                self.vchunk.append(chk)
-                self[chk.vnode] = chk.resources
-
-    def add(self, vnode, resources):
-        """
-        Add a chunk specificiation. If a chunk is already
-        defined, add the chunk as a vchunk.
-
-        :param vnode: The vnode to add
-        :type vnode: str
-        :param resources: The resources associated to the
-                          vnode
-        :type resources: str
-        :returns: Added chunk specification
-        """
-        if self.vnode == vnode:
-            self.resources = {**self.resources, **resources}
-            return self
-        elif len(self.vchunk) != 0:
-            for chk in self.vchunk:
-                if chk.vnode == vnode:
-                    chk.resources = {**self.resources, **resources}
-                    return self
-        chk = PbsTypeChunk(vnode, resources)
-        self.vchunk.append(chk)
-        return self
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        _s = ["("]
-        _s += [self.vnode, ":"]
-        for resc_k, resc_v in self.resources.items():
-            _s += [resc_k, "=", str(resc_v)]
-        if self.vchunk:
-            for _v in self.vchunk:
-                _s += ["+", _v.vnode, ":"]
-                for resc_k, resc_v in _v.resources.items():
-                    _s += [resc_k, "=", str(resc_v)]
-        _s += [")"]
-        return "".join(_s)
-
-
-class PbsTypeExecVnode(list):
-
-    """
-    Execvnode representation, expressed as a list of
-    PbsTypeChunk
-
-    :param vchunk: List of virtual chunks, only set when
-                   more than one vnode is allocated to a
-                   host satisfy a chunk requested
-    :type vchunk: List
-    :param num_chunks: The number of chunks satisfied by
-                       this execvnode
-    :type num_chunks: int
-    :param vnodes: List of vnode names allocated to the execvnode
-    :type vnodes: List
-    :param resource: method to return the amount of a named
-                     resource satisfied by this execvnode
-    """
-
-    def __init__(self, s=None):
-        if s is None:
-            return None
-
-        self._as_str = s
-        start = 0
-        self.num_chunks = 0
-        for c in range(len(s)):
-            # must split on '+' between parens because '+' can occur within
-            # paren for complex specs
-            if s[c] == '(':
-                start = c + 1
-            if s[c] == ')':
-                self.append(PbsTypeChunk(chunkstr=s[start:c]))
-                self.num_chunks += 1
-
-    def resource(self, name=None):
-        """
-        :param name: Name of the resource
-        :type name: str or None
-        """
-        if name is None:
-            return None
-        _total = 0
-        for _c in self:
-            if _c.vchunk:
-                for _v in _c.vchunk:
-                    if name in _v.resources:
-                        _total += int(_v.resources[name])
-            if name in _c.resources:
-                if name in _c.resources:
-                    _total += int(_c.resources[name])
-        return _total
-
-    @property
-    def vnodes(self):
-        vnodes = []
-        for e in self:
-            vnodes += [e.vnode]
-            if e.vchunk:
-                vnodes += [n.vnode for n in e.vchunk]
-
-        return list(set(vnodes))
-
-    def _str__(self):
-        return self._as_str
-        # below would be to verify that the converted type maps back correctly
-        _s = []
-        for _c in self:
-            _s += [str(_c)]
-        return "+".join(_s)
-
-
-class PbsTypeExecHost(str):
-
-    """
-    Descriptor class for exec_host attribute
-
-    :param hosts: List of hosts in the exec_host. Each entry is
-                  a host info dictionary that maps the number of
-                  cpus and its task number
-    :type hosts: List
-    """
-
-    def __init__(self, s=None):
-        if s is None:
-            return None
-
-        self._as_str = s
-
-        self.hosts = []
-        hsts = s.split('+')
-        for h in hsts:
-            hi = {}
-            ti = {}
-            (host, task) = h.split('/',)
-            d = task.split('*')
-            if len(d) == 1:
-                taskslot = d[0]
-                ncpus = 1
-            elif len(d) == 2:
-                (taskslot, ncpus) = d
-            else:
-                (taskslot, ncpus) = (0, 1)
-            ti['task'] = taskslot
-            ti['ncpus'] = ncpus
-            hi[host] = ti
-            self.hosts.append(hi)
-
-    def __repr__(self):
-        return str(self.hosts)
-
-    def __str__(self):
-        return self._as_str
-
-
-class PbsTypeJobId(str):
-
-    """
-    Descriptor class for a Job identifier
-
-    :param id: The numeric portion of a job identifier
-    :type id: int
-    :param server_name: The pbs server name
-    :type server_name: str
-    :param server_shortname: The first portion of a FQDN server
-                             name
-    :type server_shortname: str
-    """
-
-    def __init__(self, value=None):
-        if value is None:
-            return
-
-        self.value = value
-
-        r = value.split('.', 1)
-        if len(r) != 2:
-            return
-
-        self.id = int(r[0])
-        self.server_name = r[1]
-        self.server_shortname = r[1].split('.', 1)[0]
-
-    def __str__(self):
-        return str(self.value)
-
-
-class BatchUtils(object):
-
-    """
-    Utility class to create/convert/display various PBS
-    data structures
-    """
-
-    legal = r"\d\w:\+=\[\]~"
-    chunks_tag = re.compile(r"(?P<chunk>\([\d\w:\+=\[\]~]\)[\+]?)")
-    chunk_tag = re.compile(r"(?P<vnode>[\w\d\[\]]+):" +
-                           r"(?P<resources>[\d\w:\+=\[\]~])+\)")
-
-    array_tag = re.compile(r"(?P<jobid>[\d]+)\[(?P<subjobid>[0-9]*)\]*" +
-                           r"[.]*[(?P<server>.*)]*")
-    subjob_tag = re.compile(r"(?P<jobid>[\d]+)\[(?P<subjobid>[0-9]+)\]*" +
-                            r"[.]*[(?P<server>.*)]*")
-
-    pbsobjname_re = re.compile(r"^(?P<tag>[\w\d][\d\w\s]*:?[\s]+)" +
-                               r"*(?P<name>[\w@\.\d\[\]-]+)$")
-    pbsobjattrval_re = re.compile(r"""
-                            [\s]*(?P<attribute>[\w\d\.-]+)
-                            [\s]*=[\s]*
-                            (?P<value>.*)
-                            [\s]*""",
-                                  re.VERBOSE)
-    dt_re = r'(?P<dt_from>\d\d/\d\d/\d\d\d\d \d\d:\d\d)' + \
-            r'[\s]+' + \
-            r'(?P<dt_to>\d\d/\d\d/\d\d\d\d \d\d:\d\d)'
-    dt_tag = re.compile(dt_re)
-    hms_tag = re.compile(r'(?P<hr>\d\d):(?P<mn>\d\d):(?P<sc>\d\d)')
-    lim_tag = re.compile(r"(?P<limtype>[a-z_]+)[\.]*(?P<resource>[\w\d-]*)"
-                         r"=[\s]*\[(?P<entity_type>[ugpo]):"
-                         r"(?P<entity_name>[\w\d-]+)"
-                         r"=(?P<entity_value>[\d\w]+)\][\s]*")
-
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.du = DshUtils()
-        self.platform = self.du.get_platform()
-
-    def list_to_attrl(self, l):
-        """
-        Convert a list to a PBS attribute list
-
-        :param l: List to be converted
-        :type l: List
-        :returns: PBS attribute list
-        """
-        return self.list_to_attropl(l, None)
-
-    def list_to_attropl(self, l, op=SET):
-        """
-        Convert a list to a PBS attribute operation list
-
-        :param l: List to be converted
-        :type l: List
-        :returns: PBS attribute operation list
-        """
-        head = None
-        prev = None
-
-        for i in l:
-            a = self.str_to_attropl(i, op)
-            if prev is None:
-                head = a
-            else:
-                prev.next = a
-            prev = a
-            if op is not None:
-                a.op = op
-        return head
-
-    def str_to_attrl(self, s):
-        """
-        Convert a string to a PBS attribute list
-
-        :param s: String to be converted
-        :type s: str
-        :returns: PBS attribute list
-        """
-        return self.str_to_attropl(s, None)
-
-    def str_to_attropl(self, s, op=SET):
-        """
-        Convert a string to a PBS attribute operation list
-
-        :param s: String to be converted
-        :type s: str
-        :returns: PBS attribute operation list
-        """
-        if op is not None:
-            a = attropl()
-        else:
-            a = attrl()
-        if '.' in s:
-            (attribute, resource) = s.split('.')
-            a.name = attribute
-            a.resource = resource.strip()
-        else:
-            a.name = s
-        a.value = ''
-        a.next = None
-        if op:
-            a.op = op
-        return a
-
-    def dict_to_attrl(self, d={}):
-        """
-        Convert a dictionary to a PBS attribute list
-
-        :param d: Dictionary to be converted
-        :type d: Dictionary
-        :returns: PBS attribute list
-        """
-        return self.dict_to_attropl(d, None)
-
-    def dict_to_attropl(self, d={}, op=SET):
-        """
-        Convert a dictionary to a PBS attribute operation list
-
-        :param d: Dictionary to be converted
-        :type d: Dictionary
-        :returns: PBS attribute operation list
-        """
-        if len(d.keys()) == 0:
-            return None
-
-        prev = None
-        head = None
-
-        for k, v in d.items():
-            if isinstance(v, tuple):
-                op = v[0]
-                v = v[1]
-            if op is not None:
-                a = attropl()
-            else:
-                a = attrl()
-            if '.' in k:
-                (attribute, resource) = k.split('.')
-                a.name = attribute
-                a.resource = resource
-            else:
-                a.name = k
-            a.value = str(v)
-            if op is not None:
-                a.op = op
-            a.next = None
-
-            if prev is None:
-                head = a
-            else:
-                prev.next = a
-            prev = a
-        return head
-
-    def convert_to_attrl(self, attrib):
-        """
-        Generic call to convert Python type to PBS attribute list
-
-        :param attrib: Attributes to be converted
-        :type attrib: List or tuple or dictionary or str
-        :returns: PBS attribute list
-        """
-        return self.convert_to_attropl(attrib, None)
-
-    def convert_to_attropl(self, attrib, cmd=MGR_CMD_SET, op=None):
-        """
-        Generic call to convert Python type to PBS attribute
-        operation list
-
-        :param attrib: Attributes to be converted
-        :type attrib: List or tuple or dictionary or str
-        :returns: PBS attribute operation list
-        """
-        if op is None:
-            op = self.command_to_op(cmd)
-
-        if isinstance(attrib, (list, tuple)):
-            a = self.list_to_attropl(attrib, op)
-        elif isinstance(attrib, (dict, OrderedDict)):
-            a = self.dict_to_attropl(attrib, op)
-        elif isinstance(attrib, str):
-            a = self.str_to_attropl(attrib, op)
-        else:
-            a = None
-        return a
-
-    def command_to_op(self, cmd=None):
-        """
-        Map command to a ``SET`` or ``UNSET`` Operation. An unrecognized
-        command will return SET. No command will return None.
-
-        :param cmd: Command to be mapped
-        :type cmd: str
-        :returns: ``SET`` or ``UNSET`` operation for the command
-        """
-
-        if cmd is None:
-            return None
-        if cmd in (MGR_CMD_SET, MGR_CMD_EXPORT, MGR_CMD_IMPORT):
-            return SET
-        if cmd == MGR_CMD_UNSET:
-            return UNSET
-        return SET
-
-    def display_attrl(self, a=None, writer=sys.stdout):
-        """
-        Display an attribute list using writer, defaults to sys.stdout
-
-        :param a: Attributes
-        :type a: List
-        :returns: Displays attribute list
-        """
-        return self.display_attropl(a)
-
-    def display_attropl(self, attropl=None, writer=sys.stdout):
-        """
-        Display an attribute operation list with writer, defaults to
-        sys.stdout
-
-        :param attropl: Attribute operation list
-        :type attropl: List
-        :returns: Displays an attribute operation list
-        """
-        attrs = attropl
-        while attrs is not None:
-            if attrs.resource:
-                writer.write('\t' + attrs.name + '.' + attrs.resource + '= ' +
-                             attrs.value + '\n')
-            else:
-                writer.write('\t' + attrs.name + '= ' + attrs.value + '\n')
-            attrs = attrs.__next__
-
-    def display_dict(self, d, writer=sys.stdout):
-        """
-        Display a dictionary using writer, defaults to sys.stdout
-
-        :param d: Dictionary
-        :type d: Dictionary
-        :returns: Displays a dictionary
-        """
-        if not d:
-            return
-        for k, v in d.items():
-            writer.write(k + ': ' + v + '\n')
-
-    def batch_status_to_dictlist(self, bs=None, attr_names=None, id=None):
-        """
-        Convert a batch status to a list of dictionaries.
-        version 0.1a6 added this conversion as a typemap(out) as
-        part of the swig wrapping itself so there are fewer uses
-        for this function.Returns a list of dictionary
-        representation of batch status
-
-        :param bs: Batch status
-        :param attr_names: Attribute names
-        :returns: List of dictionaries
-        """
-        attr_time = (
-            'ctime', 'mtime', 'qtime', 'start', 'end', 'reserve_start',
-            'reserve_end', 'estimated.start_time')
-        ret = []
-        while bs:
-            if id is not None and bs.name != id:
-                bs = bs.__next__
-                continue
-            d = {}
-            attrs = bs.attribs
-            while attrs is not None:
-                if attrs.resource:
-                    key = attrs.name + '.' + attrs.resource
-                else:
-                    key = attrs.name
-                if attr_names is not None:
-                    if key not in attr_names:
-                        attrs = attrs.__next__
-                        continue
-                val = attrs.value
-                if attrs.name in attr_time:
-                    val = self.convert_time(val)
-                # for attributes that may occur multiple times (e.g., max_run)
-                # append the value in a comma-separated representation
-                if key in d:
-                    d[key] = d[key] + ',' + str(val)
-                else:
-                    d[key] = str(val)
-                attrs = attrs.__next__
-            if len(d.keys()) > 0:
-                ret.append(d)
-                d['id'] = bs.name
-            bs = bs.__next__
-        return ret
-
-    def display_batch_status(self, bs=None, attr_names=None,
-                             writer=sys.stdout):
-        """
-        Display a batch status using writer, defaults to sys.stdout
-        :param bs: Batch status
-        :param attr_name: Attribute name
-        :type attr_name: str
-        :returns: Displays batch status
-        """
-        if bs is None:
-            return
-
-        l = self.batch_status_to_dictlist(bs, attr_names)
-        self.display_batch_status_as_dictlist(l, writer)
-
-    def display_dictlist(self, l=[], writer=sys.stdout, fmt=None):
-        """
-        Display a list of dictionaries using writer, defaults to
-        sys.stdout
-
-        :param l: The list to display
-        :type l: List
-        :param writer: The stream on which to write
-        :param fmt: An optional formatting string
-        :type fmt: str or None
-        :returns: Displays list of dictionaries
-        """
-        self.display_batch_status_as_dictlist(l, writer, fmt)
-
-    def dictlist_to_file(self, l=[], filename=None, mode='w'):
-        """
-        write a dictlist to file
-
-        :param l: Dictlist
-        :type l: List
-        :param filename: File to which dictlist need to be written
-        :type filename: str
-        :param mode: Mode of file
-        :type mode: str
-        :raises: Exception writing to file
-        """
-        if filename is None:
-            self.logger.error('a filename is required')
-            return
-
-        d = os.path.dirname(filename)
-        if d != '' and not os.path.isdir(d):
-            os.makedirs(d)
-        try:
-            with open(filename, mode) as f:
-                self.display_dictlist(l, f)
-        except:
-            self.logger.error('error writing to file ' + filename)
-            raise
-
-    def batch_status_as_dictlist_to_file(self, l=[], writer=sys.stdout):
-        """
-        Write a dictlist to file
-
-        :param l: Dictlist
-        :type l: List
-        :raises: Exception writing to file
-        """
-        return self.dictlist_to_file(l, writer)
-
-    def file_to_dictlist(self, fpath=None, attribs=None, id=None):
-        """
-        Convert a file to a batch dictlist format
-
-        :param fpath: File to be converted
-        :type fpath: str
-        :param attribs: Attributes
-        :returns: File converted to a batch dictlist format
-        """
-        if fpath is None:
-            return []
-
-        try:
-            with open(fpath, 'r') as f:
-                lines = f.readlines()
-        except Exception as e:
-            self.logger.error('error converting list of dictionaries to ' +
-                              'file ' + str(e))
-            return []
-
-        return self.convert_to_dictlist(lines, attribs, id=id)
-
-    def file_to_vnodedef(self, fpath=None):
-        """
-        Convert a file output of pbsnodes -av to a vnode
-        definition format
-
-        :param fpath: File to be converted
-        :type fpath: str
-        :returns: Vnode definition format
-        """
-        if fpath is None:
-            return None
-        try:
-            with open(fpath, 'r') as f:
-                lines = f.readlines()
-        except:
-            self.logger.error('error converting nodes to vnode def')
-            return None
-
-        dl = self.convert_to_dictlist(lines)
-
-        return self.dictlist_to_vnodedef(dl)
-
-    def show(self, l=[], name=None, fmt=None):
-        """
-        Alias to display_dictlist with sys.stdout as writer
-
-        :param name: if specified only show the object of
-                     that name
-        :type name: str
-        :param fmt: Optional formatting string, uses %n for
-                    object name, %a for attributes, for example
-                    a format of r'%nE{\}nE{\}t%aE{\}n' will display
-                    objects with their name starting on the first
-                    column, a new line, and attributes indented by
-                    a tab followed by a new line at the end.
-        :type fmt: str
-        """
-        if name:
-            i = 0
-            for obj in l:
-                if obj['id'] == name:
-                    l = [l[i]]
-                    break
-                i += 1
-        self.display_dictlist(l, fmt=fmt)
-
-    def get_objtype(self, d={}):
-        """
-        Get the type of a given object
-
-        :param d: Dictionary
-        :type d: Dictionary
-        :Returns: Type of the object
-        """
-        if 'Job_Name' in d:
-            return JOB
-        elif 'queue_type' in d:
-            return QUEUE
-        elif 'Reserve_Name' in d:
-            return RESV
-        elif 'server_state' in d:
-            return SERVER
-        elif 'Mom' in d:
-            return NODE
-        elif 'event' in d:
-            return HOOK
-        elif 'type' in d:
-            return RSC
-        return None
-
-    def display_batch_status_as_dictlist(self, l=[], writer=sys.stdout,
-                                         fmt=None):
-        """
-        Display a batch status as a list of dictionaries
-        using writer, defaults to sys.stdout
-
-        :param l: List
-        :type l: List
-        :param fmt: - Optional format string
-        :type fmt: str or None
-        :returns: Displays batch status as a list of dictionaries
-        """
-        if l is None:
-            return
-
-        for d in l:
-            self.display_batch_status_as_dict(d, writer, fmt)
-
-    def batch_status_as_dict_to_str(self, d={}, fmt=None):
-        """
-        Return a string representation of a batch status dictionary
-
-        :param d: Dictionary
-        :type d: Dictionary
-        :param fmt: Optional format string
-        :type fmt: str or None
-        :returns: String representation of a batch status dictionary
-        """
-        objtype = self.get_objtype(d)
-
-        if fmt is not None:
-            if '%1' in fmt:
-                _d1 = fmt['%1']
-            else:
-                _d1 = '\n'
-            if '%2' in fmt:
-                _d2 = fmt['%2']
-            else:
-                _d2 = '    '
-            if '%3' in fmt:
-                _d3 = fmt['%3']
-            else:
-                _d3 = ' = '
-            if '%4' in fmt:
-                _d4 = fmt['%4']
-            else:
-                _d4 = '\n'
-            if '%5' in fmt:
-                _d5 = fmt['%5']
-            else:
-                _d5 = '\n'
-            if '%6' in fmt:
-                _d6 = fmt['%6']
-            else:
-                _d6 = ''
-        else:
-            _d1 = '\n'
-            _d2 = '    '
-            _d3 = ' = '
-            _d4 = '\n'
-            _d5 = '\n'
-            _d6 = ''
-
-        if objtype == JOB:
-            _n = 'Job Id: ' + d['id'] + _d1
-        elif objtype == QUEUE:
-            _n = 'Queue: ' + d['id'] + _d1
-        elif objtype == RESV:
-            _n = 'Name: ' + d['id'] + _d1
-        elif objtype == SERVER:
-            _n = 'Server: ' + d['id'] + _d1
-        elif objtype == RSC:
-            _n = 'Resource: ' + d['id'] + _d1
-        elif 'id' in d:
-            _n = d['id'] + _d1
-            del d['id']
-        else:
-            _n = ''
-
-        _a = []
-        for k, v in sorted(d.items()):
-            if k == 'id':
-                continue
-            _a += [_d2 + k + _d3 + str(v)]
-
-        return _n + _d4.join(_a) + _d5 + _d6
-
-    def display_batch_status_as_dict(self, d={}, writer=sys.stdout, fmt=None):
-        """
-        Display a dictionary representation of a batch status
-        using writer, defaults to sys.stdout
-
-        :param d: Dictionary
-        :type d: Dictionary
-        :param fmt: Optional format string
-        :param fmt: str
-        :returns: Displays dictionary representation of a batch
-                  status
-        """
-        writer.write(self.batch_status_as_dict_to_str(d, fmt))
-
-    def decode_dictlist(self, l=None, json=True):
-        """
-        decode a list of dictionaries
-
-        :param l: List of dictionaries
-        :type l: List
-        :param json: The target of the decode is meant for ``JSON``
-                     formatting
-        :returns: Decoded list of dictionaries
-        """
-        if l is None:
-            return ''
-
-        _js = []
-        for d in l:
-            _jdict = {}
-            for k, v in d.items():
-                if ',' in v:
-                    _jdict[k] = v.split(',')
-                else:
-                    _jdict[k] = self.decode_value(v)
-            _js.append(_jdict)
-        return _js
-
-    def convert_to_dictlist(self, l, attribs=None, mergelines=True, id=None):
-        """
-        Convert a list of records into a dictlist format.
-
-        :param l: array of records to convert
-        :type l: List
-        :param mergelines: merge qstat broken lines into one
-        :returns: Record list converted into dictlist format
-        """
-
-        if mergelines:
-            lines = []
-            count = 1
-            for i in range(len(l)):
-                if l[i].startswith('\t'):
-                    _e = len(lines) - 1
-                    lines[_e] = lines[_e].strip('\r\n\t') + \
-                        l[i].strip('\r\n\t')
-                elif (not l[i].startswith(' ') and i > count and
-                      l[i - count].startswith('\t')):
-                    _e = len(lines) - count
-                    lines[_e] = lines[_e] + l[i]
-                    if ((i + 1) < len(l) and not
-                            l[i + 1].startswith(('\t', ' '))):
-                        count += 1
-                    else:
-                        count = 1
-                else:
-                    lines.append(l[i])
-        else:
-            lines = l
-
-        objlist = []
-        d = {}
-
-        for l in lines:
-            l = l.strip()
-            m = self.pbsobjname_re.match(l)
-            if m:
-                if len(d.keys()) > 1:
-                    if id is None or (id is not None and d['id'] == id):
-                        objlist.append(d.copy())
-                d = {}
-                d['id'] = m.group('name')
-                _t = m.group('tag')
-                if _t == 'Resv ID: ':
-                    d[_t.replace(': ', '')] = d['id']
-            else:
-                m = self.pbsobjattrval_re.match(l)
-                if m:
-                    attr = m.group('attribute')
-                    if (attribs is None or attr.lower() in attribs or
-                            attr in attribs):
-                        if attr in d:
-                            d[attr] = d[attr] + "," + m.group('value')
-                        else:
-                            d[attr] = m.group('value')
-        # add the last element
-        if len(d.keys()) > 1:
-            if id is None or (id is not None and d['id'] == id):
-                objlist.append(d.copy())
-
-        return objlist
-
-    def convert_to_batch(self, l, mergelines=True):
-        """
-        Convert a list of records into a batch format.
-
-        :param l: array of records to convert
-        :type l: List
-        :param mergelines: qstat breaks long lines over
-                           multiple lines, merge them\
-                           to one by default.
-        :type mergelines: bool
-        :returns: A linked list of batch status
-        """
-
-        if mergelines:
-            lines = []
-            for i in range(len(l)):
-                if l[i].startswith('\t'):
-                    _e = len(lines) - 1
-                    lines[_e] = lines[_e].strip('\r\t') + \
-                        l[i].strip('\r\n')
-                else:
-                    lines.append(l[i])
-        else:
-            lines = l
-
-        head_bs = None
-        prev_bs = None
-        prev_attr = None
-
-        for l in lines:
-            l = l.strip()
-            m = self.pbsobjname_re.match(l)
-            if m:
-                bs = batch_status()
-                bs.name = m.group('name')
-                bs.attribs = None
-                bs.next = None
-                if prev_bs:
-                    prev_bs.next = bs
-                if head_bs is None:
-                    head_bs = bs
-                prev_bs = bs
-                prev_attr = None
-            else:
-                m = self.pbsobjattrval_re.match(l)
-                if m:
-                    attr = attrl()
-                    attr.name = m.group('attribute')
-                    attr.value = m.group('value')
-                    attr.next = None
-                    if bs.attribs is None:
-                        bs.attribs = attr
-                    if prev_attr:
-                        prev_attr.next = attr
-                    prev_attr = attr
-
-        return head_bs
-
-    def file_to_batch(self, fpath=None):
-        """
-        Convert a file to batch format
-
-        :param fpath: File to be converted
-        :type fpath: str or None
-        :returns: File converted into batch format
-        """
-        if fpath is None:
-            return None
-
-        try:
-            with open(fpath, 'r') as f:
-                lines = f.readlines()
-        except:
-            self.logger.error('error converting file ' + fpath + ' to batch')
-            return None
-
-        return self.convert_to_batch(lines)
-
-    def batch_to_file(self, bs=None, fpath=None):
-        """
-        Write a batch object to file
-
-        :param bs: Batch status
-        :param fpath: File to which batch object is to be written
-        :type fpath: str
-        """
-        if bs is None or fpath is None:
-            return
-
-        try:
-            with open(fpath, 'w') as f:
-                self.display_batch_status(bs, writer=f)
-        except:
-            self.logger.error('error converting batch status to file')
-
-    def batch_to_vnodedef(self, bs):
-        """
-        :param bs: Batch status
-        :returns: The vnode definition string representation
-                  of nodes batch_status
-        """
-        out = ["$configversion 2\n"]
-
-        while bs is not None:
-            attr = bs.attribs
-            while attr is not None:
-                if attr.name.startswith("resources_available") or \
-                        attr.name.startswith("sharing"):
-                    out += [bs.name + ": "]
-                    out += [attr.name + "=" + attr.value + "\n"]
-                attr = attr.__next__
-            bs = bs.__next__
-        return "".join(out)
-
-    def dictlist_to_vnodedef(self, dl=None):
-        """
-        :param dl: Dictionary list
-        :type dl: List
-        :returns: The vnode definition string representation
-                  of a dictlist
-        """
-        if dl is None:
-            return ''
-
-        out = ["$configversion 2\n"]
-
-        for node in dl:
-            for k, v in node.items():
-                if (k.startswith("resources_available") or
-                        k.startswith("sharing") or
-                        k.startswith("provision_enable") or
-                        k.startswith("queue")):
-                    out += [node['id'] + ": "]
-                    # MoM dislikes empty values reported in vnode defs so
-                    # we substitute no value for an actual empty string
-                    if not v:
-                        v = '""'
-                    out += [k + "=" + str(v) + "\n"]
-
-        return "".join(out)
-
-    def objlist_to_dictlist(self, objlist=None):
-        """
-        Convert a list of PBS/PTL objects ``(e.g. Server/Job...)``
-        into a dictionary list representation of the batch status
-
-        :param objlist: List of ``PBS/PTL`` objects
-        :type objlist: List
-        :returns: Dictionary list representation of the batch status
-        """
-        if objlist is None:
-            return None
-
-        bsdlist = []
-        for obj in objlist:
-            newobj = self.obj_to_dict(obj)
-            bsdlist.append(newobj)
-        return bsdlist
-
-    def obj_to_dict(self, obj):
-        """
-        Convert a PBS/PTL object (e.g. Server/Job...) into a
-        dictionary format
-
-        :param obj: ``PBS/PTL`` object
-        :returns: Dictionary of ``PBS/PTL`` objects
-        """
-        newobj = dict(obj.attributes.items())
-        newobj[id] = obj.name
-        return newobj
-
-    def parse_execvnode(self, s=None):
-        """
-        Parse an execvnode string into chunk objects
-
-        :param s: Execvnode string
-        :type s: str or None
-        :returns: Chunk objects for parsed execvnode string
-        """
-        if s is None:
-            return None
-
-        chunks = []
-        start = 0
-        for c in range(len(s)):
-            if s[c] == '(':
-                start = c + 1
-            if s[c] == ')':
-                chunks.append(PbsTypeChunk(chunkstr=s[start:c]).info)
-        return chunks
-
-    def anupbs_exechost_numhosts(self, s=None):
-        """
-        :param s: Exechost string
-        :type s: str or None
-        """
-        n = 0
-        if '[' in s:
-            eh = re.sub(r'.*\[(.*)\].*', r'\1', s)
-            hosts = eh.split(',')
-            for hid in hosts:
-                elm = hid.split('-')
-                if len(elm) == 2:
-                    n += int(elm[1]) - int(elm[0]) + 1
-                else:
-                    n += 1
-        else:
-            n += 1
-        return n
-
-    def parse_exechost(self, s=None):
-        """
-        Parse an exechost string into a dictionary representation
-
-        :param s: String to be parsed
-        :type s: str or None
-        :returns: Dictionary format of the exechost string
-        """
-        if s is None:
-            return None
-
-        hosts = []
-        hsts = s.split('+')
-        for h in hsts:
-            hi = {}
-            ti = {}
-            (host, task) = h.split('/',)
-            d = task.split('*')
-            if len(d) == 1:
-                taskslot = d[0]
-                ncpus = 1
-            elif len(d) == 2:
-                (taskslot, ncpus) = d
-            else:
-                (taskslot, ncpus) = (0, 1)
-            ti['task'] = taskslot
-            ti['ncpus'] = ncpus
-            hi[host] = ti
-            hosts.append(hi)
-        return hosts
-
-    def parse_select(self, s=None):
-        """
-        Parse a ``select/schedselect`` string into a list
-        of dictionaries.
-
-        :param s: select/schedselect string
-        :type s: str or None
-        :returns: List of dictonaries
-        """
-        if s is None:
-            return
-        info = []
-        chunks = s.split('+')
-        for chunk in chunks:
-            d = chunk.split(':')
-            numchunks = int(d[0])
-            resources = {}
-            for e in d[1:]:
-                k, v = e.split('=')
-                resources[k] = v
-            for _ in range(numchunks):
-                info.append(resources)
-
-        return info
-
-    @classmethod
-    def isfloat(cls, value):
-        """
-        returns true if value is a float or a string representation
-        of a float returns false otherwise
-
-        :param value: value to be checked
-        :type value: str or int or float
-        :returns: True or False
-        """
-        if isinstance(value, float):
-            return True
-        if isinstance(value, str):
-            try:
-                float(value)
-                return True
-            except ValueError:
-                return False
-
-    @classmethod
-    def decode_value(cls, value):
-        """
-        Decode an attribute/resource value, if a value is
-        made up of digits only then return the numeric value
-        of it, if it is made of alphanumeric values only, return
-        it as a string, if it is of type size, i.e., with a memory
-        unit such as b,kb,mb,gb then return the converted size to
-        kb without the unit
-
-        :param value: attribute/resource value
-        :type value: str or int
-        :returns: int or float or string
-        """
-
-        if value is None or isinstance(value, collections.Callable):
-            return value
-
-        if isinstance(value, (int, float)):
-            return value
-
-        if value.isdigit():
-            return int(value)
-
-        if value.isalpha() or value == '':
-            return value
-
-        if cls.isfloat(value):
-            return float(value)
-
-        if ':' in value:
-            try:
-                value = int(PbsTypeDuration(value))
-            except ValueError:
-                pass
-            return value
-
-        # TODO revisit:  assume (this could be the wrong type, need a real
-        # data model anyway) that the remaining is a memory expression
-        try:
-            value = PbsTypeSize(value)
-            return value.value
-        except ValueError:
-            pass
-        except TypeError:
-            # if not then we pass to return the value as is
-            pass
-
-        return value
-
-    def convert_time(self, val, fmt='%a %b %d %H:%M:%S %Y'):
-        """
-        Convert a date time format into number of seconds
-        since epoch
-
-        :param val: date time value
-        :param fmt: date time format
-        :type fmt: str
-        :returns: seconds
-        """
-        # Tweak for NAS format that puts the number of seconds since epoch
-        # in between
-        if val.split()[0].isdigit():
-            val = int(val.split()[0])
-        elif not val.isdigit():
-            val = time.strptime(val, fmt)
-            val = int(time.mktime(val))
-        return val
-
-    def convert_duration(self, val):
-        """
-        Convert HH:MM:SS into number of seconds
-        If a number is fed in, that number is returned
-        If neither formatted data is fed in, returns 0
-
-        :param val: duration value
-        :type val: str
-        :raises: Incorrect format error
-        :returns: seconds
-        """
-        if val.isdigit():
-            return int(val)
-
-        hhmmss = val.split(':')
-        if len(hhmmss) != 3:
-            self.logger.error('Incorrect format, expected HH:MM:SS')
-            return 0
-        return int(hhmmss[0]) * 3600 + int(hhmmss[1]) * 60 + int(hhmmss[2])
-
-    def convert_seconds_to_datetime(self, tm, fmt=None, seconds=True):
-        """
-        Convert time format to number of seconds since epoch
-
-        :param tm: the time to convert
-        :type tm: str
-        :param fmt: optional format string. If used, the seconds
-                    parameter is ignored.Defaults to ``%Y%m%d%H%M``
-        :type fmt: str or None
-        :param seconds: if True, convert time with seconds
-                        granularity. Defaults to True.
-        :type seconds: bool
-        :returns: Number of seconds
-        """
-        if fmt is None:
-            fmt = "%Y%m%d%H%M"
-            if seconds:
-                fmt += ".%S"
-
-        return time.strftime(fmt, time.localtime(int(tm)))
-
-    def convert_stime_to_seconds(self, st):
-        """
-        Convert a time to seconds, if we fail we return the
-        original time
-
-        :param st: Time to be converted
-        :type st: str
-        :returns: Number of seconds
-        """
-        try:
-            ret = time.mktime(time.strptime(st, '%a %b %d %H:%M:%S %Y'))
-        except:
-            ret = st
-        return ret
-
-    def convert_dedtime(self, dtime):
-        """
-        Convert dedicated time string of form %m/%d/%Y %H:%M.
-
-        :param dtime: A datetime string, as an entry in the
-                      dedicated_time file
-        :type dtime: str
-        :returns: A tuple of (from,to) of time since epoch
-        """
-        dtime_from = None
-        dtime_to = None
-
-        m = self.dt_tag.match(dtime.strip())
-        if m:
-            try:
-                _f = "%m/%d/%Y %H:%M"
-                dtime_from = self.convert_datetime_to_epoch(m.group('dt_from'),
-                                                            fmt=_f)
-                dtime_to = self.convert_datetime_to_epoch(m.group('dt_to'),
-                                                          fmt=_f)
-            except:
-                self.logger.error('error converting dedicated time')
-        return (dtime_from, dtime_to)
-
-    def convert_datetime_to_epoch(self, mdyhms, fmt="%m/%d/%Y %H:%M:%S"):
-        """
-        Convert the date time to epoch
-
-        :param mdyhms: date time
-        :type mdyhms: str
-        :param fmt: Format for date time
-        :type fmt: str
-        :returns: Epoch time
-        """
-        return int(time.mktime(time.strptime(mdyhms, fmt)))
-
-    def compare_versions(self, v1, v2, op=None):
-        """
-        Compare v1 to v2 with respect to operation op
-
-        :param v1: If not a looseversion, it gets converted
-                   to it
-        :param v2: If not a looseversion, it gets converted
-                   to it
-        :param op: An operation, one of ``LT``, ``LE``, ``EQ``,
-                   ``GE``, ``GT``
-        :type op: str
-        :returns: True or False
-        """
-        if op is None:
-            self.logger.error('missing operator, one of LT,LE,EQ,GE,GT')
-            return None
-
-        if v1 is None or v2 is None:
-            return False
-
-        if isinstance(v1, str):
-            v1 = LooseVersion(v1)
-        if isinstance(v2, str):
-            v2 = LooseVersion(v2)
-
-        if op == GT:
-            if v1 > v2:
-                return True
-        elif op == GE:
-            if v1 >= v2:
-                return True
-        elif op == EQ:
-            if v1 == v2:
-                return True
-        elif op == LT:
-            if v1 < v2:
-                return True
-        elif op == LE:
-            if v1 <= v2:
-                return True
-
-        return False
-
-    def convert_arglist(self, attr):
-        """
-        strip the XML attributes from the argument list attribute
-
-        :param attr: Argument list attributes
-        :type attr: List
-        :returns: Stripped XML attributes
-        """
-
-        xmls = "<jsdl-hpcpa:Argument>"
-        xmle = "</jsdl-hpcpa:Argument>"
-        nattr = attr.replace(xmls, " ")
-        nattr = nattr.replace(xmle, " ")
-
-        return nattr.strip()
-
-    def convert_to_cli(self, attrs, op=None, hostname=None, dflt_conf=True,
-                       exclude_attrs=None):
-        """
-        Convert attributes into their CLI format counterpart. This
-        method is far from complete, it grows as needs come by and
-        could use a rewrite, especially going along with a rewrite
-        of pbs_api_to_cli
-
-        :param attrs: Attributes to convert
-        :type attrs: List or str or dictionary
-        :param op: The qualifier of the operation being performed,
-                   such as ``IFL_SUBMIT``, ``IFL_DELETE``,
-                   ``IFL_TERMINUTE``...
-        :type op: str or None
-        :param hostname: The name of the host on which to operate
-        :type hostname: str or None
-        :param dflt_conf: Whether we are using the default PBS
-                          configuration
-        :type dflt_conf: bool
-        :param exclude_attrs: Optional list of attributes to not
-                              convert
-        :type exclude_attrs: List
-        :returns: CLI format of attributes
-        """
-        ret = []
-
-        if op == IFL_SUBMIT:
-            executable = arglist = None
-
-        elif op == IFL_DELETE:
-            _c = []
-            if isinstance(attrs, str):
-                attrs = [attrs]
-
-            if isinstance(attrs, list):
-                for a in attrs:
-                    if 'force' in a:
-                        _c.append('-Wforce')
-                    if 'deletehist' in a:
-                        _c.append('-x')
-                    if 'nomail' in a:
-                        _c.append('-Wsuppress_email=-1')
-            return _c
-
-        elif op == IFL_TERMINATE:
-            _c = []
-            if attrs is None:
-                _c = []
-            elif isinstance(attrs, str):
-                _c = ['-t', attrs]
-            else:
-                if ((attrs & SHUT_QUICK) == SHUT_QUICK):
-                    _c = ['-t', 'quick']
-                if ((attrs & SHUT_IMMEDIATE) == SHUT_IMMEDIATE):
-                    _c = ['-t', 'immediate']
-                if ((attrs & SHUT_DELAY) == SHUT_DELAY):
-                    _c = ['-t', 'delay']
-                if ((attrs & SHUT_WHO_SCHED) == SHUT_WHO_SCHED):
-                    _c.append('-s')
-                if ((attrs & SHUT_WHO_MOM) == SHUT_WHO_MOM):
-                    _c.append('-m')
-                if ((attrs & SHUT_WHO_SECDRY) == SHUT_WHO_SECDRY):
-                    _c.append('-f')
-                if ((attrs & SHUT_WHO_IDLESECDRY) == SHUT_WHO_IDLESECDRY):
-                    _c.append('-F')
-                if ((attrs & SHUT_WHO_SECDONLY) == SHUT_WHO_SECDONLY):
-                    _c.append('-i')
-            return _c
-
-        elif op == IFL_RALTER:
-            if isinstance(attrs, dict):
-                if 'extend' in attrs and attrs['extend'] is 'force':
-                    ret.append('-Wforce')
-                    del attrs['extend']
-
-        if attrs is None or len(attrs) == 0:
-            return ret
-
-        # if a list, convert to a dictionary to fall into a single processing
-        # of the attributes
-        if (isinstance(attrs, list) and len(attrs) > 0 and
-                not isinstance(attrs[0], tuple)):
-            tmp_attrs = {}
-            for each_attr in attrs:
-                tmp_attrs[each_attr] = ''
-            del attrs
-            attrs = tmp_attrs
-            del tmp_attrs
-
-        if isinstance(attrs, (dict, OrderedDict)):
-            attrs = attrs.items()
-
-        for a, v in attrs:
-            # In job name string, use prefix "\" with special charater
-            # to read as an ordinary character on
-            # cray, craysim, and shasta platform
-            if (a == "Job_Name") and (self.platform == 'cray' or
-                                      self.platform == 'craysim' or
-                                      self.platform == 'shasta'):
-                v = v.translate({ord(c): "\\" +
-                                 c for c in r"~`!@#$%^&*()[]{};:,/<>?\|="})
-            if exclude_attrs is not None and a in exclude_attrs:
-                continue
-
-            if op == IFL_SUBMIT:
-                if a == ATTR_executable:
-                    executable = v
-                    continue
-                if a == ATTR_Arglist:
-                    if v is not None:
-                        arglist = self.convert_arglist(v)
-                        if len(arglist) == 0:
-                            return []
-                    continue
-            if isinstance(v, list):
-                v = ','.join(v)
-
-            # when issuing remote commands, escape spaces in attribute values
-            if (((hostname is not None) and
-                 (not self.du.is_localhost(hostname))) or
-                    (not dflt_conf)):
-                if ' ' in str(v):
-                    v = '"' + v + '"'
-
-            if '.' in a:
-                (attribute, resource) = a.split('.')
-                ret.append('-' + api_to_cli[attribute])
-                rv = resource
-                if v is not None:
-                    rv += '=' + str(v)
-                ret.append(rv)
-            else:
-                try:
-                    val = api_to_cli[a]
-                except KeyError:
-                    self.logger.error('error  retrieving key ' + str(a))
-                    # for unknown or junk options
-                    ret.append(a)
-                    if v is not None:
-                        ret.append(str(v))
-                    continue
-                # on a remote job submit append the remote server name
-                # to the queue name
-                if ((op == IFL_SUBMIT) and (hostname is not None)):
-                    if ((not self.du.is_localhost(hostname)) and
-                            (val == 'q') and (v is not None) and
-                            ('@' not in v) and (v != '')):
-                        v += '@' + hostname
-                val = '-' + val
-                if '=' in val:
-                    if v is not None:
-                        ret.append(val + str(v))
-                    else:
-                        ret.append(val)
-                else:
-                    ret.append(val)
-                    if v is not None:
-                        ret.append(str(v))
-
-        # Executable and argument list must come last in a job submission
-        if ((op == IFL_SUBMIT) and (executable is not None)):
-            ret.append('--')
-            ret.append(executable)
-            if arglist is not None:
-                ret.append(arglist)
-        return ret
-
-    def filter_batch_status(self, bs, attrib):
-        """
-        Filter out elements that don't have the attributes requested
-        This is needed to adapt to the fact that requesting a
-        resource attribute returns all ``'<resource-name>.*'``
-        attributes so we need to ensure that the specific resource
-        requested is present in the stat'ed object.
-
-        This is needed especially when calling expect with an op=NE
-        because we need to filter on objects that have exactly
-        the attributes requested
-
-        :param bs: Batch status
-        :param attrib: Requested attributes
-        :type attrib: str or dictionary
-        :returns: Filtered batch status
-        """
-
-        if isinstance(attrib, dict):
-            keys = attrib.keys()
-        elif isinstance(attrib, str):
-            keys = attrib.split(',')
-        else:
-            keys = attrib
-
-        if keys:
-            del_indices = []
-            for idx in range(len(bs)):
-                for k in bs[idx].keys():
-                    if '.' not in k:
-                        continue
-                    if k != 'id' and k not in keys:
-                        del bs[idx][k]
-                # if no matching resources, remove the object
-                if len(bs[idx]) == 1:
-                    del_indices.append(idx)
-
-            for i in sorted(del_indices, reverse=True):
-                del bs[i]
-
-        return bs
-
-    def convert_attributes_by_op(self, attributes, setattrs=False):
-        """
-        Convert attributes by operator, i.e. convert an attribute
-        of the form
-
-        ``<attr_name><op><value>`` (e.g. resources_available.ncpus>4)
-
-        to
-
-        ``<attr_name>: (<op>, <value>)``
-        (e.g. resources_available.ncpus: (GT, 4))
-
-        :param attributes: the attributes to convert
-        :type attributes: List
-        :param setattrs: if True, set the attributes with no operator
-                         as (SET, '')
-        :type setattrs: bool
-        :returns: Converted attributes by operator
-        """
-        # the order of operator matters because they are used to search by
-        # regex so the longer strings to search must come first
-        operators = ('<=', '>=', '!=', '=', '>', '<', '~')
-        d = {}
-        for attr in attributes:
-            found = False
-            for op in operators:
-                if op in attr:
-                    a = attr.split(op)
-                    d[a[0]] = (PTL_STR_TO_OP[op], a[1])
-                    found = True
-                    break
-            if not found and setattrs:
-                d[attr] = (SET, '')
-        return d
-
-    def operator_in_attribute(self, attrib):
-        """
-        Returns True if an operator string is present in an
-        attribute name
-
-        :param attrib: Attribute name
-        :type attrib: str
-        :returns: True or False
-        """
-        operators = PTL_STR_TO_OP.keys()
-        for a in attrib:
-            for op in operators:
-                if op in a:
-                    return True
-        return False
-
-    def list_resources(self, objtype=None, objs=[]):
-        """
-        Lists the resources
-
-        :param objtype: Type of the object
-        :type objtype: str
-        :param objs: Object list
-        :type objs: List
-        :returns: List of resources
-        """
-        if objtype in (VNODE, NODE, SERVER, QUEUE, SCHED):
-            prefix = 'resources_available.'
-        elif objtype in (JOB, RESV):
-            prefix = 'Resource_List.'
-        else:
-            return
-
-        resources = []
-        for o in objs:
-            for a in o.keys():
-                if a.startswith(prefix):
-                    res = a.replace(prefix, '')
-                    if res not in resources:
-                        resources.append(res)
-        return resources
-
-    def compare(self, obj1, obj2, showdiff=False):
-        """
-        Compare two objects.
-
-        :param showdiff: whether to print the specific differences,
-                         defaults to False
-        :type showdiff: bool
-        :returns: 0 if objects are identical and non zero otherwise
-        """
-        if not showdiff:
-            ret = cmp(obj1, obj2)
-            if ret != 0:
-                self.logger.info('objects differ')
-            return ret
-
-        if not isinstance(obj1, type(obj2)):
-            self.logger.error('objects are of different type')
-            return 1
-
-        if isinstance(obj1, list):
-            if len(obj1) != len(obj2):
-                self.logger.info(
-                    'comparing ' + str(
-                        obj1) + ' and ' + str(
-                        obj2))
-                self.logger.info('objects are of different lengths')
-                return
-            for i in range(len(obj1)):
-                self.compare(obj1[i], obj2[i], showdiff=showdiff)
-            return
-
-        if isinstance(obj1, dict):
-            self.logger.info('comparing ' + str(obj1) + ' and ' + str(obj2))
-            onlyobj1 = []
-            diffobjs = []
-            onlyobj2 = []
-            for k1, v1 in obj1.items():
-                if k1 not in obj2:
-                    onlyobj1.append(k1 + '=' + str(v1))
-
-                if k1 in obj2 and obj2[k1] != v1:
-                    diffobjs.append(
-                        k1 + '=' + str(v1) + ' vs ' + k1 + '=' + str(obj2[k1]))
-
-            for k2, v2 in obj2.items():
-                if k2 not in obj1:
-                    onlyobj2.append(k2 + '=' + str(v2))
-
-            if len(onlyobj1) > 0:
-                self.logger.info("only in first object: " + " ".join(onlyobj1))
-            if len(onlyobj2) > 0:
-                self.logger.info(
-                    "only in second object: " + " ".join(onlyobj2))
-            if len(diffobjs) > 0:
-                self.logger.info("diff between objects: " + " ".join(diffobjs))
-            if len(onlyobj1) == len(onlyobj2) == len(diffobjs) == 0:
-                self.logger.info("objects are identical")
-                return 0
-
-            return 1
-
-    @classmethod
-    def random_str(cls, length=1, prefix=''):
-        """
-        Generates the random string
-
-        :param length: Length of the string
-        :type length: int
-        :param prefix: Prefix of the string
-        :type prefix: str
-        :returns: Random string
-        """
-        r = [random.choice(string.ascii_letters) for _ in range(length)]
-        r = ''.join([prefix] + r)
-        if hasattr(cls, '__uniq_rstr'):
-            while r in cls.__uniq_rstr:
-                r = [random.choice(string.ascii_letters)
-                     for _ in range(length)]
-                r = ''.join([prefix] + r)
-            cls.__uniq_rstr.append(r)
-        else:
-            cls.__uniq_rstr = [r]
-
-        return r
-
-    def _make_template_formula(self, formula):
-        """
-        Create a template of the formula
-
-        :param formula: Formula for which template is to be created
-        :type formula: str
-        :returns: Template
-        """
-        tformula = []
-        skip = False
-        for c in formula:
-            if not skip and c.isalpha():
-                tformula.append('$')
-                skip = True
-            if c in ('+', '-', '/', ' ', '*', '%'):
-                skip = False
-            tformula.append(c)
-        return "".join(tformula)
-
-    def update_attributes_list(self, obj):
-        """
-        Updates the attribute list
-
-        :param obj: Objects
-        :returns: Updated attribute list
-        """
-        if not hasattr(obj, 'attributes'):
-            return
-        if not hasattr(obj, 'Resource_List'):
-            setattr(obj, 'Resource_List', {})
-
-        for attr, val in obj.attributes.items():
-            if attr.startswith('Resource_List.'):
-                (_, resource) = attr.split('.')
-                obj.Resource_List[resource] = val
-
-    def parse_fgc_limit(self, limstr=None):
-        """
-        Parse an ``FGC`` limit entry, of the form:
-
-        ``<limtype>[.<resource>]=\[<entity_type>:<entity_name>
-        =<entity_value>\]``
-
-        :param limstr: FGC limit string
-        :type limstr: str or None
-        :returns: Parsed FGC string in given format
-        """
-        m = self.lim_tag.match(limstr)
-        if m:
-            _v = str(self.decode_value(m.group('entity_value')))
-            return (m.group('limtype'), m.group('resource'),
-                    m.group('entity_type'), m.group('entity_name'), _v)
-        return None
-
-    def is_job_array(self, jobid):
-        """
-        If a job array return True, otherwise return False
-
-        :param jobid: PBS jobid
-        :returns: True or False
-        """
-        if self.array_tag.match(jobid):
-            return True
-        return False
-
-    def is_subjob(self, jobid):
-        """
-        If a subjob of a job array, return the subjob id
-        otherwise return False
-
-        :param jobid: PBS job id
-        :type jobid: str
-        :returns: True or False
-        """
-        m = self.subjob_tag.match(jobid)
-        if m:
-            return m.group('subjobid')
-        return False
-
-
-class PbsTypeFGCLimit(object):
-
-    """
-    FGC limit entry, of the form:
-
-    ``<limtype>[.<resource>]=\[<entity_type>:<entity_name>=
-    <entity_value>\]``
-
-    :param attr: FGC limit attribute
-    :type attr: str
-    :param value: Value of attribute
-    :type value: int
-    :returns: FGC limit entry of given format
-    """
-
-    fgc_attr_pat = re.compile(r"(?P<ltype>[a-z_]+)[\.]*(?P<resource>[\w\d-]*)")
-    fgc_val_pat = re.compile(r"[\s]*\[(?P<etype>[ugpo]):(?P<ename>[\w\d-]+)"
-                             r"=(?P<eval>[\d]+)\][\s]*")
-    utils = BatchUtils()
-
-    def __init__(self, attr, val):
-
-        self.attr = attr
-        self.val = val
-
-        a = self.fgc_attr_pat.match(attr)
-        if a:
-            self.limit_type = a.group('ltype')
-            self.resource_name = a.group('resource')
-        else:
-            self.limit_type = None
-            self.resource_name = None
-
-        v = self.fgc_val_pat.match(val)
-        if v:
-            self.lim_value = self.utils.decode_value(v.group('eval'))
-            self.entity_type = v.group('etype')
-            self.entity_name = v.group('ename')
-        else:
-            self.lim_value = None
-            self.entity_type = None
-            self.entity_name = None
-
-    def __val__(self):
-        return ('[' + str(self.entity_type) + ':' +
-                str(self.entity_name) + '=' + str(self.lim_value) + ']')
-
-    def __str__(self):
-        return (self.attr + ' = ' + self.__val__())
-
-
-class PbsBatchStatus(list):
-
-    """
-    Wrapper class for Batch Status object
-    Converts a batch status (as dictlist) into a list of
-    PbsBatchObjects
-
-    :param bs: Batch status
-    :type bs: List or dictionary
-    :returns: List of PBS batch objects
-    """
-
-    def __init__(self, bs):
-        if not isinstance(bs, (list, dict)):
-            raise TypeError("Expected a list or dictionary")
-
-        if isinstance(bs, dict):
-            self.append(PbsBatchObject(bs))
-        else:
-            for b in bs:
-                self.append(PbsBatchObject(b))
-
-    def __str__(self):
-        rv = []
-        for l in self.__bs:
-            rv += [self.__bu.batch_status_as_dict_to_str(l)]
-        return "\n".join(rv)
-
-
-class PbsBatchObject(list):
-
-    def __init__(self, bs):
-        self.set_batch_status(bs)
-
-    def set_batch_status(self, bs):
-        """
-        Sets the batch status
-
-        :param bs: Batch status
-        """
-        if 'id' in bs:
-            self.name = bs['id']
-        for k, v in bs.items():
-            self.append(PbsAttribute(k, v))
 
 
 class PbsAttribute(object):
@@ -3086,338 +558,108 @@ class Limit(Policy):
         return " ".join(l)
 
 
-class ExpectActions(object):
-
+class Holidays():
     """
-    List of action handlers to run when Server's expect
-    function does not get the expected result
-
-    :param action: Action to run
-    :type action: str
-    :param level: Logging level
+    Descriptive calss for Holiday file.
     """
 
-    actions = {}
+    def __init__(self):
+        self.year = {'id': "YEAR", 'value': None, 'valid': False}
+        self.weekday = {'id': "weekday", 'p': None, 'np': None, 'valid': None,
+                        'position': None}
+        self.monday = {'id': "monday", 'p': None, 'np': None, 'valid': None,
+                       'position': None}
+        self.tuesday = {'id': "tuesday", 'p': None, 'np': None, 'valid': None,
+                        'position': None}
+        self.wednesday = {'id': "wednesday", 'p': None, 'np': None,
+                          'valid': None, 'position': None}
+        self.thursday = {'id': "thursday", 'p': None, 'np': None,
+                         'valid': None, 'position': None}
+        self.friday = {'id': "friday", 'p': None, 'np': None, 'valid': None,
+                       'position': None}
+        self.saturday = {'id': "saturday", 'p': None, 'np': None,
+                         'valid': None, 'position': None}
+        self.sunday = {'id': "sunday", 'p': None, 'np': None, 'valid': None,
+                       'position': None}
 
-    def __init__(self, action=None, level=logging.INFO):
-        self.logger = logging.getLogger(__name__)
-        self.add_action(action, level=level)
-
-    def add_action(self, action=None, hostname=None, level=logging.INFO):
-        """
-        Add an action
-
-        :param action: Action to add
-        :param hostname: Machine hostname
-        :type hostname: str
-        :param level: Logging level
-        """
-        if action is not None and action.name is not None and\
-           action.name not in self.actions:
-            self.actions[action.name] = action
-            msg = ['expect action: added action ' + action.name]
-            if hostname:
-                msg += [' to server ' + hostname]
-            if level >= logging.INFO:
-                self.logger.info("".join(msg))
-            else:
-                self.logger.debug("".join(msg))
-
-    def has_action(self, name):
-        """
-        check whether action exists or not
-
-        :param name: Name of action
-        :type name: str
-        """
-        if name in self.actions:
-            return True
-        return False
-
-    def get_action(self, name):
-        """
-        Get an action if exists
-
-        :param name: Name of action
-        :type name: str
-        """
-        if name in self.actions:
-            return self.actions[name]
-        return None
-
-    def list_actions(self, level=logging.INFO):
-        """
-        List an actions
-
-        :param level: Logging level
-        """
-        if level >= logging.INFO:
-            self.logger.info(self.get_all_cations)
-        else:
-            self.logger.debug(self.get_all_cations)
-
-    def get_all_actions(self):
-        """
-        Get all the action
-        """
-        return list(self.actions.values())
-
-    def get_actions_by_type(self, atype=None):
-        """
-        Get an action by type
-
-        :param atype: Action type
-        :type atype: str
-        """
-        if atype is None:
-            return None
-
-        ret_actions = []
-        for action in self.actions.values():
-            if action.type is not None and action.type == atype:
-                ret_actions.append(action)
-        return ret_actions
-
-    def _control_action(self, action=None, name=None, enable=None):
-        if action:
-            action.enabled = False
-            name = action.name
-        elif name is not None:
-            if name == 'ALL':
-                for a in self.actions:
-                    a.enabled = enable
-            else:
-                a = self.get_action(name)
-                a.enabled = False
-        else:
-            return
-
-        if enable:
-            msg = 'enabled'
-        else:
-            msg = 'disabled'
-
-        self.logger.info('expect action: ' + name + ' ' + msg)
-
-    def disable_action(self, action=None, name=None):
-        """
-        Disable an action
-        """
-        self._control_action(action, name, enable=False)
-
-    def enable_action(self, action=None, name=None):
-        """
-        Enable an action
-        """
-        self._control_action(action, name, enable=True)
-
-    def disable_all_actions(self):
-        """
-        Disable all actions
-        """
-        for a in self.actions.values():
-            a.enabled = False
-
-    def enable_all_actions(self):
-        """
-        Enable all actions
-        """
-        for a in self.actions.values():
-            a.enabled = True
-
-
-class ExpectAction(object):
-
-    """
-    Action function to run when Server's expect function does
-    not get the expected result
-
-    :param atype: Action type
-    :type atype: str
-    """
-
-    def __init__(self, name=None, enabled=True, atype=None, action=None,
-                 level=logging.INFO):
-        self.logger = logging.getLogger(__name__)
-        self.set_name(name, level=level)
-        self.set_enabled(enabled)
-        self.set_type(atype)
-        self.set_action(action)
-
-    def set_name(self, name, level=logging.INFO):
-        """
-        Set the actione name
-
-        :param name: Action name
-        :type name: str
-        """
-        if level >= logging.INFO:
-            self.logger.info('expect action: created new action ' + name)
-        else:
-            self.logger.debug('expect action: created new action ' + name)
-        self.name = name
-
-    def set_enabled(self, enabled):
-        self.enabled = enabled
-
-    def set_type(self, atype):
-        self.type = atype
-
-    def set_action(self, action):
-        self.action = action
-
-
-class PbsTypeAttribute(dict):
-
-    """
-    Experimental. This is a placeholder object that will be used
-    in the future to map attribute information and circumvent
-    the error-pron dynamic type detection that is currently done
-    using ``decode_value()``
-    """
-
-    def __getitem__(self, name):
-        return BatchUtils.decode_value(super(PbsTypeAttribute,
-                                             self).__getitem__(name))
-
-
-class PBSObject(object):
-
-    """
-    Generic PBS Object encapsulating attributes and defaults
-
-    The ptl_conf dictionary holds general configuration for the
-    framework's operations, specifically, one can control:
-
-    mode: set to ``PTL_CLI`` to operate in ``CLI`` mode or
-    ``PTL_API`` to operate in ``API`` mode
-
-    max_attempts: the default maximum number of attempts
-    to be used by different methods like expect, log_match.
-    Defaults to 60
-
-    attempt_interval: the default time interval (in seconds)
-    between each requests. Defaults to 0.5
-
-    update_attributes: the default on whether Object attributes
-    should be updated using a list of dictionaries. Defaults
-    to True
-
-    :param name: The name associated to the object
-    :type name: str
-    :param attrs: Dictionary of attributes to set on object
-    :type attrs: Dictionary
-    :param defaults: Dictionary of default attributes. Setting
-                     this will override any other object's default
-    :type defaults: Dictionary
-    """
-
-    logger = logging.getLogger(__name__)
-    utils = BatchUtils()
-    platform = sys.platform
-
-    ptl_conf = {
-        'mode': PTL_API,
-        'max_attempts': 60,
-        'attempt_interval': 0.5,
-        'update_attributes': True,
-    }
-
-    def __init__(self, name, attrs={}, defaults={}):
-        self.attributes = OrderedDict()
-        self.name = name
-        self.dflt_attributes = defaults
-        self.attropl = None
-        self.custom_attrs = OrderedDict()
-        self.ctime = time.time()
-
-        self.set_attributes(attrs)
-
-    @classmethod
-    def set_update_attributes(cls, val):
-        """
-        Set update attributes
-        """
-        cls.logger.info('setting update attributes ' + str(val))
-        if val or (val.isdigit() and int(val) == 1) or val[0] in ('t', 'T'):
-            val = True
-        else:
-            val = False
-        cls.ptl_conf['update_attributes'] = val
-
-    @classmethod
-    def set_max_attempts(cls, val):
-        """
-        Set max attempts
-        """
-        cls.logger.info('setting max attempts ' + str(val))
-        cls.ptl_conf['max_attempts'] = int(val)
-
-    @classmethod
-    def set_attempt_interval(cls, val):
-        """
-        Set attempt interval
-        """
-        cls.logger.info('setting attempt interval ' + str(val))
-        cls.ptl_conf['attempt_interval'] = float(val)
-
-    def set_attributes(self, a={}):
-        """
-        set attributes and custom attributes on this object.
-        custom attributes are used when converting attributes
-        to CLI
-
-        :param a: Attribute dictionary
-        :type a: Dictionary
-        """
-        if isinstance(a, list):
-            a = OrderedDict(a)
-
-        self.attributes = OrderedDict(list(self.dflt_attributes.items()) +
-                                      list(self.attributes.items()) +
-                                      list(a.items()))
-
-        self.custom_attrs = OrderedDict(list(self.custom_attrs.items()) +
-                                        list(a.items()))
-
-    def unset_attributes(self, attrl=[]):
-        """
-        Unset attributes from object's attributes and custom
-        attributes
-
-        :param attrl: Attribute list
-        :type attrl: List
-        """
-        for attr in attrl:
-            if attr in self.attributes:
-                del self.attributes[attr]
-            if attr in self.custom_attrs:
-                del self.custom_attrs[attr]
+        self.days_set = []  # list of set days
+        self._days_map = {'weekday': self.weekday, 'monday': self.monday,
+                          'tuesday': self.tuesday, 'wednesday': self.wednesday,
+                          'thursday': self.thursday, 'friday': self.friday,
+                          'saturday': self.saturday, 'sunday': self.sunday}
+        self.holidays = []  # list of calendar holidays
 
     def __str__(self):
         """
-        Return a string representation of this PBSObject
+        Return the content to write to holidays file as a string
         """
-        if self.name is None:
-            return ""
+        content = []
+        if self.year['valid']:
+            content.append(self.year['id'] + "\t" +
+                           self.year['value'])
 
-        s = []
-        if isinstance(self, Job):
-            s += ["Job Id: " + self.name + "\n"]
-        elif isinstance(self, Queue):
-            s += ["Queue: " + self.name + "\n"]
-        elif isinstance(self, Server):
-            s += ["Server: " + self.hostname + "\n"]
-        elif isinstance(self, Reservation):
-            s += ["Name: " + "\n"]
+        for i in range(0, len(self.days_set)):
+            content.append(self.days_set[i]['id'] + "\t" +
+                           self.days_set[i]['p'] + "\t" +
+                           self.days_set[i]['np'])
+
+        # Add calendar holidays
+        for day in self.holidays:
+            content.append(day)
+
+        return "\n".join(content)
+
+
+class PbsTypeFGCLimit(object):
+
+    """
+    FGC limit entry, of the form:
+
+    ``<limtype>[.<resource>]=\[<entity_type>:<entity_name>=
+    <entity_value>\]``
+
+    :param attr: FGC limit attribute
+    :type attr: str
+    :param value: Value of attribute
+    :type value: int
+    :returns: FGC limit entry of given format
+    """
+
+    fgc_attr_pat = re.compile(r"(?P<ltype>[a-z_]+)[\.]*(?P<resource>[\w\d-]*)")
+    fgc_val_pat = re.compile(r"[\s]*\[(?P<etype>[ugpo]):(?P<ename>[\w\d-]+)"
+                             r"=(?P<eval>[\d]+)\][\s]*")
+    utils = BatchUtils()
+
+    def __init__(self, attr, val):
+
+        self.attr = attr
+        self.val = val
+
+        a = self.fgc_attr_pat.match(attr)
+        if a:
+            self.limit_type = a.group('ltype')
+            self.resource_name = a.group('resource')
         else:
-            s += [self.name + "\n"]
-        for k, v in self.attributes.items():
-            s += ["    " + k + " = " + str(v) + "\n"]
-        return "".join(s)
+            self.limit_type = None
+            self.resource_name = None
 
-    def __repr__(self):
-        return str(self.attributes)
+        v = self.fgc_val_pat.match(val)
+        if v:
+            self.lim_value = self.utils.decode_value(v.group('eval'))
+            self.entity_type = v.group('etype')
+            self.entity_name = v.group('ename')
+        else:
+            self.lim_value = None
+            self.entity_type = None
+            self.entity_name = None
+
+    def __val__(self):
+        return ('[' + str(self.entity_type) + ':' +
+                str(self.entity_name) + '=' + str(self.lim_value) + ']')
+
+    def __str__(self):
+        return (self.attr + ' = ' + self.__val__())
+
 
 
 class PBSService(PBSObject):
@@ -4432,6 +1674,2073 @@ class PBSService(PBSObject):
         self.dyn_created_files = []
 
 
+
+class Scheduler(PBSService):
+
+    """
+    Container of Scheduler related properties
+
+    :param hostname: The hostname on which the scheduler instance
+                     is operating
+    :type hostname: str or None
+    :param server: A PBS server instance to which this scheduler
+                   is associated
+    :param pbsconf_file: path to a PBS configuration file
+    :type pbsconf_file: str or None
+    :param snapmap: A dictionary of PBS objects (node,server,etc)
+                    to mapped files from PBS snap directory
+    :type snapmap: Dictionary
+    :param snap: path to PBS snap directory (This will overrides
+                 snapmap)
+    :type snap: str or None
+    :param db_acccess: set to either file containing credentials
+                       to DB access or dictionary containing
+                       ``{'dbname':...,'user':...,'port':...}``
+    :type db_access: str or dictionary
+    """
+
+    # A vanilla scheduler configuration. This set may change based on
+    # updates to PBS
+    sched_dflt_config = {
+        "backfill": "true        ALL",
+        "backfill_prime": "false ALL",
+        "help_starving_jobs": "true     ALL",
+        "max_starve": "24:00:00",
+        "strict_ordering": "false ALL",
+        "provision_policy": "\"aggressive_provision\"",
+        "preempt_order": "\"SCR\"",
+        "fairshare_entity": "euser",
+        "dedicated_prefix": "ded",
+        "primetime_prefix": "p_",
+        "nonprimetime_prefix": "np_",
+        "preempt_queue_prio": "150",
+        "preempt_prio": "\"express_queue, normal_jobs\"",
+        "prime_exempt_anytime_queues": "false",
+        "round_robin": "False    all",
+        "fairshare_usage_res": "cput",
+        "smp_cluster_dist": "pack",
+        "fair_share": "false     ALL",
+        "preempt_sort": "min_time_since_start",
+        "node_sort_key": "\"sort_priority HIGH\" ALL",
+        "sort_queues": "true     ALL",
+        "by_queue": "True                ALL",
+        "preemptive_sched": "true        ALL",
+        "resources": "\"ncpus, mem, arch, host, vnode, aoe\"",
+    }
+
+    sched_config_options = ["node_group_key",
+                            "dont_preempt_starving",
+                            "fairshare_enforce_no_shares",
+                            "strict_ordering",
+                            "resource_unset_infinite",
+                            "unknown_shares",
+                            "dedicated_prefix",
+                            "help_starving_jobs",
+                            "max_starve",
+                            "sort_queues",
+                            "backfill",
+                            "primetime_prefix",
+                            "nonprimetime_prefix",
+                            "backfill_prime",
+                            "prime_exempt_anytime_queues",
+                            "prime_spill",
+                            "prime_exempt_anytime_queues",
+                            "prime_spill",
+                            "resources",
+                            "mom_resources",
+                            "smp_cluster_dist",
+                            "preempt_queue_prio",
+                            "preempt_suspend",
+                            "preempt_checkpoint",
+                            "preempt_requeue",
+                            "preemptive_sched",
+                            "dont_preempt_starving",
+                            "node_group_key",
+                            "dont_preempt_starving",
+                            "fairshare_enforce_no_shares",
+                            "strict_ordering",
+                            "resource_unset_infinite",
+                            "provision_policy",
+                            "resv_confirm_ignore",
+                            "allow_aoe_calendar",
+                            "max_job_check",
+                            "preempt_attempts",
+                            "update_comments",
+                            "sort_by",
+                            "key",
+                            "preempt_starving",
+                            "preempt_fairshare",
+                            "assign_ssinodes",
+                            "cpus_per_ssinode",
+                            "mem_per_ssinode",
+                            "strict_fifo",
+                            "mem_per_ssinode",
+                            "strict_fifo"
+                            ]
+
+    fs_re = r'(?P<name>[\S]+)[\s]*:[\s]*Grp:[\s]*(?P<Grp>[-]*[0-9]*)' + \
+            r'[\s]*cgrp:[\s]*(?P<cgrp>[-]*[0-9]*)[\s]*' + \
+            r'Shares:[\s]*(?P<Shares>[-]*[0-9]*)[\s]*Usage:[\s]*' + \
+            r'(?P<Usage>[0-9]+)[\s]*Perc:[\s]*(?P<Perc>.*)%'
+    fs_tag = re.compile(fs_re)
+
+    def __init__(self, hostname=None, server=None, pbsconf_file=None,
+                 snapmap={}, snap=None, db_access=None, id='default',
+                 sched_priv=None):
+
+        self.sched_config_file = None
+        self.dflt_holidays_file = None
+        self.holidays_file = None
+        self.sched_config = {}
+        self._sched_config_comments = {}
+        self._config_order = []
+        self.dedicated_time_file = None
+        self.dedicated_time = None
+        self.dedicated_time_as_str = None
+        self.fairshare_tree = None
+        self.resource_group = None
+        self.holidays_obj = None
+        self.server = None
+        self.db_access = None
+        self.user = None
+
+        if server is not None:
+            self.server = server
+            if snap is None and self.server.snap is not None:
+                snap = self.server.snap
+            if (len(snapmap) == 0) and (len(self.server.snapmap) != 0):
+                snapmap = self.server.snapmap
+        else:
+            self.server = Server(hostname, pbsconf_file=pbsconf_file,
+                                 db_access=db_access, snap=snap,
+                                 snapmap=snapmap)
+
+        if hostname is None:
+            hostname = self.server.hostname
+
+        PBSService.__init__(self, hostname, pbsconf_file=pbsconf_file,
+                            snap=snap, snapmap=snapmap)
+        _m = ['scheduler ', self.shortname]
+        if pbsconf_file is not None:
+            _m += ['@', pbsconf_file]
+        _m += [': ']
+        self.logprefix = "".join(_m)
+        self.pi = PBSInitServices(hostname=self.hostname,
+                                  conf=self.pbs_conf_file)
+        self.pbs_conf = self.server.pbs_conf
+        self.sc_name = id
+
+        self.user = DAEMON_SERVICE_USER
+
+        self.dflt_sched_config_file = os.path.join(self.pbs_conf['PBS_EXEC'],
+                                                   'etc', 'pbs_sched_config')
+
+        self.dflt_holidays_file = os.path.join(self.pbs_conf['PBS_EXEC'],
+                                               'etc', 'pbs_holidays')
+
+        self.dflt_resource_group_file = os.path.join(self.pbs_conf['PBS_EXEC'],
+                                                     'etc',
+                                                     'pbs_resource_group')
+        self.dflt_dedicated_file = os.path.join(self.pbs_conf['PBS_EXEC'],
+                                                'etc',
+                                                'pbs_dedicated')
+        self.setup_sched_priv(sched_priv)
+        self.setup_sched_logs()
+
+        self.db_access = db_access
+
+        self.version = None
+
+    def __del__(self):
+        del self.__dict__
+
+    def setup_sched_priv(self, sched_priv=None):
+        """
+        Initialize Scheduler() member variables on initialization or if
+        sched_priv changes
+        """
+        if sched_priv is None:
+            if 'sched_priv' in self.attributes:
+                sched_priv = self.attributes['sched_priv']
+            else:
+                sched_priv = os.path.join(self.pbs_conf['PBS_HOME'],
+                                          'sched_priv')
+
+        self.du.chown(self.hostname, sched_priv, uid=self.user,
+                      recursive=True, sudo=True)
+
+        self.sched_config_file = os.path.join(sched_priv, 'sched_config')
+        self.resource_group_file = os.path.join(sched_priv, 'resource_group')
+        self.holidays_file = os.path.join(sched_priv, 'holidays')
+        self.set_dedicated_time_file(os.path.join(sched_priv,
+                                                  'dedicated_time'))
+
+        if not os.path.exists(sched_priv):
+            return
+
+        self.parse_sched_config()
+
+        self.fairshare_tree = self.query_fairshare()
+        rg = self.parse_resource_group(self.hostname, self.resource_group_file)
+        self.resource_group = rg
+
+        self.holidays_obj = Holidays()
+        self.holidays_parse_file(level=logging.DEBUG)
+
+    def setup_sched_logs(self):
+        if 'sched_log' in self.attributes:
+            sched_logs = self.attributes['sched_log']
+        else:
+            sched_logs = os.path.join(self.pbs_conf['PBS_HOME'],
+                                      'sched_logs')
+
+        self.du.chown(self.hostname, sched_logs, uid=self.user,
+                      recursive=True, sudo=True)
+
+    def initialise_service(self):
+        """
+        initialise the scheduler object
+        """
+        PBSService.initialise_service(self)
+        try:
+            attrs = self.server.status(SCHED, level=logging.DEBUG,
+                                       db_access=self.db_access,
+                                       id=self.sc_name)
+            if attrs is not None and len(attrs) > 0:
+                self.attributes = attrs[0]
+        except (PbsManagerError, PbsStatusError) as e:
+            self.logger.error('Error querying scheduler %s' % e.msg)
+
+    def isUp(self):
+        """
+        Check for PBS scheduler up
+        """
+        for _ in range(self.ptl_conf['max_attempts']):
+            rv = super(Scheduler, self)._isUp(self)
+            if rv:
+                break
+            time.sleep(1)
+        return rv
+
+    def signal(self, sig):
+        """
+        Send a signal to PBS scheduler
+        """
+        self.logger.info('scheduler ' + self.shortname + ': sent signal ' +
+                         sig)
+        return super(Scheduler, self)._signal(sig, inst=self)
+
+    def get_pid(self):
+        """
+        Get the PBS scheduler pid
+        """
+        return super(Scheduler, self)._get_pid(inst=self)
+
+    def all_instance_pids(self):
+        """
+        Get the all pids for the instance
+        """
+        return super(Scheduler, self)._all_instance_pids(inst=self)
+
+    def start(self, sched_home=None, args=None, launcher=None):
+        """
+        Start the scheduler
+        :param sched_home: Path to scheduler log and home directory
+        :type sched_home: str
+        :param args: Arguments required to start the scheduler
+        :type args: str
+        :param launcher: Optional utility to invoke the launch of the service
+        :type launcher: str or list
+        """
+        if self.attributes['id'] != 'default':
+            cmd = [os.path.join(self.pbs_conf['PBS_EXEC'],
+                                'sbin', 'pbs_sched')]
+            cmd += ['-I', self.attributes['id']]
+            cmd += ['-S', str(self.attributes['sched_port'])]
+            if sched_home is not None:
+                cmd += ['-d', sched_home]
+            try:
+                ret = self.du.run_cmd(self.hostname, cmd, sudo=True,
+                                      logerr=False, level=logging.INFOCLI)
+            except PbsInitServicesError as e:
+                raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
+            self.server.manager(MGR_CMD_LIST, SCHED)
+            return ret
+
+        if args is not None or launcher is not None:
+            return super(Scheduler, self)._start(inst=self, args=args,
+                                                 launcher=launcher)
+        else:
+            try:
+                rv = self.pi.start_sched()
+                pid = self._validate_pid(self)
+                if pid is None:
+                    raise PbsServiceError(rv=False, rc=-1,
+                                          msg="Could not find PID")
+            except PbsInitServicesError as e:
+                raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
+            return rv
+
+    def stop(self, sig=None):
+        """
+        Stop the PBS scheduler
+
+        :param sig: Signal to stop the PBS scheduler
+        :type sig: str
+        """
+        if sig is not None:
+            self.logger.info(self.logprefix + 'stopping Scheduler on host ' +
+                             self.hostname)
+            return super(Scheduler, self)._stop(sig, inst=self)
+        else:
+            try:
+                self.pi.stop_sched()
+            except PbsInitServicesError as e:
+                raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
+            return True
+
+    def restart(self):
+        """
+        Restart the PBS scheduler
+        """
+        if self.isUp():
+            if not self.stop():
+                return False
+        return self.start()
+
+    def log_match(self, msg=None, id=None, n=50, tail=True, allmatch=False,
+                  regexp=False, max_attempts=None, interval=None,
+                  starttime=None, endtime=None, level=logging.INFO,
+                  existence=True):
+        """
+        Match given ``msg`` in given ``n`` lines of Scheduler log
+
+        :param msg: log message to match, can be regex also when
+                    ``regexp`` is True
+        :type msg: str
+        :param id: The id of the object to trace. Only used for
+                   tracejob
+        :type id: str
+        :param n: 'ALL' or the number of lines to search through,
+                  defaults to 50
+        :type n: str or int
+        :param tail: If true (default), starts from the end of
+                     the file
+        :type tail: bool
+        :param allmatch: If True all matching lines out of then
+                         parsed are returned as a list. Defaults
+                         to False
+        :type allmatch: bool
+        :param regexp: If true msg is a Python regular expression.
+                       Defaults to False
+        :type regexp: bool
+        :param max_attempts: the number of attempts to make to find
+                             a matching entry
+        :type max_attempts: int
+        :param interval: the interval between attempts
+        :type interval: int
+        :param starttime: If set ignore matches that occur before
+                          specified time
+        :type starttime: float
+        :param endtime: If set ignore matches that occur after
+                        specified time
+        :type endtime: float
+        :param level: The logging level, defaults to INFO
+        :type level: int
+        :param existence: If True (default), check for existence of
+                        given msg, else check for non-existence of
+                        given msg.
+        :type existence: bool
+
+        :return: (x,y) where x is the matching line
+                 number and y the line itself. If allmatch is True,
+                 a list of tuples is returned.
+        :rtype: tuple
+        :raises PtlLogMatchError:
+                When ``existence`` is True and given
+                ``msg`` is not found in ``n`` line
+                Or
+                When ``existence`` is False and given
+                ``msg`` found in ``n`` line.
+
+        .. note:: The matching line number is relative to the record
+                  number, not the absolute line number in the file.
+        """
+        return self._log_match(self, msg, id, n, tail, allmatch, regexp,
+                               max_attempts, interval, starttime, endtime,
+                               level=level, existence=existence)
+
+    def run_scheduling_cycle(self):
+        """
+        Convenience method to start and finish a sched cycle
+        """
+        sched = self.attributes['id']
+        old_val = self.server.status(SCHED, 'scheduling', id=sched)[
+            0]['scheduling']
+
+        # Make sure that we aren't in a sched cycle already
+        self.server.manager(MGR_CMD_SET, SCHED, {
+                            'scheduling': 'False'}, id=sched)
+
+        # Kick a new cycle
+        tbefore = time.time()
+        self.server.manager(MGR_CMD_SET, SCHED, {
+                            'scheduling': 'True'}, id=sched)
+        self.log_match("Starting Scheduling",
+                       starttime=tbefore)
+
+        if old_val == 'False':
+            # This will also ensure that the sched cycle is over before
+            # returning
+            self.server.manager(MGR_CMD_SET, SCHED, {'scheduling': 'False'},
+                                id=sched)
+        else:
+            self.server.expect(SCHED, {'state': 'scheduling'}, op=NE,
+                               id=sched, interval=1, max_attempts=1200,
+                               trigger_sched_cycle=False)
+
+    def pbs_version(self):
+        """
+        Get the version of the scheduler instance
+        """
+        if self.version:
+            return self.version
+
+        version = self.log_match('pbs_version', tail=False)
+        if version:
+            version = version[1].strip().split('=')[1]
+        else:
+            version = "unknown"
+
+        self.version = LooseVersion(version)
+
+        return self.version
+
+    def parse_sched_config(self, schd_cnfg=None):
+        """
+        Parse a sceduling configuration file into a dictionary.
+        Special handling of identical keys ``(e.g., node_sort_key)``
+        is done by appending a delimiter, '%', between each value
+        of the key. When printed back to file, each delimited entry
+        gets written on a line of its own. For example, the python
+        dictionary entry:
+
+        ``{'node_sort_key':
+        ["ncpus HIGH unusued" prime", "node_priority HIH"
+        non-prime"]}``
+
+        will get written as:
+
+        ``node_sort_key: "ncpus HIGH unusued" prime``
+        ``node_sort_key: "node_priority HIGH"  non-prime``
+
+        Returns sched_config dictionary that gets reinitialized
+        every time this method is called.
+        """
+        # sched_config is initialized
+        if self.sched_config:
+            del(self.sched_config)
+            self.sched_config = {}
+            self._sched_config_comments = {}
+            self._config_order = []
+        if schd_cnfg is None:
+            if self.sched_config_file is not None:
+                schd_cnfg = self.sched_config_file
+            else:
+                self.logger.error('no scheduler configuration file to parse')
+                return False
+
+        try:
+            conf_opts = self.du.cat(self.hostname, schd_cnfg,
+                                    sudo=(not self.has_snap),
+                                    level=logging.DEBUG2)['out']
+        except:
+            self.logger.error('error parsing scheduler configuration')
+            return False
+
+        _comment = []
+        conf_re = re.compile(
+            r'[#]?[\s]*(?P<conf_id>[\w]+):[\s]*(?P<conf_val>.*)')
+        for line in conf_opts:
+            m = conf_re.match(line)
+            if m:
+                key = m.group('conf_id')
+                val = m.group('conf_val')
+                # line is a comment, it could be a commented out scheduling
+                # option, or the description of an option. It could also be
+                # that part of the description is an example setting of the
+                # option.
+                # We must keep track of commented out options in order to
+                # rewrite the configuration in the same order as it was defined
+                if line.startswith('#'):
+                    if key in self.sched_config_options:
+                        _comment += [line]
+                        if key in self._sched_config_comments:
+                            self._sched_config_comments[key] += _comment
+                            _comment = []
+                        else:
+                            self._sched_config_comments[key] = _comment
+                            _comment = []
+                        if key not in self._config_order:
+                            self._config_order.append(key)
+                    else:
+                        _comment += [line]
+                    continue
+
+                if key not in self._sched_config_comments:
+                    self._sched_config_comments[key] = _comment
+                else:
+                    self._sched_config_comments[key] += _comment
+                if key not in self._config_order:
+                    self._config_order.append(key)
+
+                _comment = []
+                if key in self.sched_config:
+                    if isinstance(self.sched_config[key], list):
+                        if isinstance(val, list):
+                            self.sched_config[key].extend(val)
+                        else:
+                            self.sched_config[key].append(val)
+                    else:
+                        if isinstance(val, list):
+                            self.sched_config[key] = [self.sched_config[key]]
+                            self.sched_config[key].extend(val)
+                        else:
+                            self.sched_config[key] = [self.sched_config[key],
+                                                      val]
+                else:
+                    self.sched_config[key] = val
+            else:
+                _comment += [line]
+        self._sched_config_comments['PTL_SCHED_CONFIG_TAIL'] = _comment
+        return True
+
+    def check_defaults(self, config):
+        """
+        Check the values in argument config against default values
+        """
+
+        if len(config.keys()) == 0:
+            return
+        for k, v in self.sched_dflt_config.items():
+            if k in config:
+                s1 = v
+                s1 = s1.replace(" ", "")
+                s1 = s1.replace("\t", "").strip()
+                s2 = config[k]
+                s2 = s2.replace(" ", "")
+                s2 = s2.replace("\t", "").strip()
+
+                if s1 != s2:
+                    self.logger.debug(k + ' non-default: ' + v +
+                                      ' != ' + config[k])
+
+    def apply_config(self, config=None, validate=True, path=None):
+        """
+        Apply the configuration specified by config
+
+        :param config: Configurations to set. Default: self.
+                       sched_config
+        :param validate: If True (the default) validate that
+                         settings did not yield an error.
+                         Validation is done by parsing the
+                         scheduler log which, in some cases may
+                         be slow and therefore undesirable.
+        :type validate: bool
+        :param path: Optional path to file to which configuration
+                     is written. If None, the configuration is
+                     written to PBS_HOME/sched_priv/sched_config
+        :type path: str
+        :returns: True on success and False otherwise. Success
+                  means that upon applying the new configuration
+                  the scheduler did not emit an
+                  "Error reading line" in its log file.
+        """
+
+        if config is None:
+            config = self.sched_config
+
+        if len(config) == 0:
+            return True
+
+        reconfig_time = time.time()
+        try:
+            fn = self.du.create_temp_file()
+            with open(fn, "w", encoding="utf-8") as fd:
+                for k in self._config_order:
+                    if k in config:
+                        if k in self._sched_config_comments:
+                            fd.write("\n".join(self._sched_config_comments[k]))
+                            fd.write("\n")
+                        v = config[k]
+                        if isinstance(v, list):
+                            for val in v:
+                                fd.write(k + ": " + str(val) + "\n")
+                        else:
+                            fd.write(k + ": " + str(v) + "\n")
+                    elif k in self._sched_config_comments:
+                        fd.write("\n".join(self._sched_config_comments[k]))
+                        fd.write("\n")
+                for k, v in self.sched_config.items():
+                    if k not in self._config_order:
+                        fd.write(k + ": " + str(v).strip() + "\n")
+
+                if 'PTL_SCHED_CONFIG_TAIL' in self._sched_config_comments:
+                    fd.write("\n".join(
+                        self._sched_config_comments['PTL_SCHED_CONFIG_TAIL']))
+                    fd.write("\n")
+
+            if path is None:
+                if 'sched_priv' in self.attributes:
+                    sched_priv = self.attributes['sched_priv']
+                else:
+                    sched_priv = os.path.join(self.pbs_conf['PBS_HOME'],
+                                              "sched_priv")
+                sp = os.path.join(sched_priv, "sched_config")
+            else:
+                sp = path
+            self.du.run_copy(self.hostname, src=fn, dest=sp,
+                             preserve_permission=False,
+                             sudo=True, uid=self.user)
+            os.remove(fn)
+
+            self.logger.debug(self.logprefix + "updated configuration")
+        except:
+            m = self.logprefix + 'error in apply_config '
+            self.logger.error(m + str(traceback.print_exc()))
+            raise PbsSchedConfigError(rc=1, rv=False, msg=m)
+
+        if validate:
+            self.get_pid()
+            self.signal('-HUP')
+            try:
+                self.log_match("Sched;reconfigure;Scheduler is reconfiguring",
+                               starttime=reconfig_time)
+                self.log_match("Error reading line", max_attempts=2,
+                               starttime=reconfig_time, existence=False)
+            except PtlLogMatchError as log_error:
+                self.logger.error(log_error.msg)
+                _msg = 'Error in validating sched_config changes'
+                raise PbsSchedConfigError(rc=1, rv=False,
+                                          msg=_msg)
+        return True
+
+    def set_sched_config(self, confs={}, apply=True, validate=True):
+        """
+        set a ``sched_config`` property
+
+        :param confs: dictionary of key value sched_config entries
+        :type confs: Dictionary
+        :param apply: if True (the default), apply configuration.
+        :type apply: bool
+        :param validate: if True (the default), validate the
+                         configuration settings.
+        :type validate: bool
+        """
+        self.parse_sched_config()
+        self.logger.info(self.logprefix + "config " + str(confs))
+        self.sched_config = {**self.sched_config, **confs}
+        if apply:
+            try:
+                self.apply_config(validate=validate)
+            except PbsSchedConfigError as sched_error:
+                _msg = sched_error.msg
+                self.logger.error(_msg)
+                for k in confs:
+                    del self.sched_config[k]
+                self.apply_config(validate=validate)
+                raise PbsSchedConfigError(rc=1, rv=False, msg=_msg)
+        return True
+
+    def add_server_dyn_res(self, custom_resource, script_body=None,
+                           res_file=None, apply=True, validate=True,
+                           dirname=None, host=None, perm=0o700,
+                           prefix='PtlPbsSvrDynRes', suffix='.scr'):
+        """
+        Add a root owned server dynamic resource script or file to the
+        scheduler configuration.
+
+        :param custom_resource: The name of the custom resource to
+                                define
+        :type custom_resource: str
+        :param script_body: The body of the server dynamic resource
+        :param res_file: Alternatively to passing the script body, use
+                     the file instead
+        :type res_file: str or None
+        :param apply: if True (the default), apply configuration.
+        :type apply: bool
+        :param validate: if True (the default), validate the
+                         configuration settings.
+        :type validate: bool
+        :param dirname: the file will be created in this directory
+        :type dirname: str or None
+        :param host: the hostname on which dyn res script is created
+        :type host: str or None
+        :param perm: perm to use while creating scripts
+                     (must be octal like 0o777)
+        :param prefix: the file name will begin with this prefix
+        :type prefix: str
+        :param suffix: the file name will end with this suffix
+        :type suffix: str
+        :return Absolute path of the dynamic resource script
+        """
+        if res_file is not None:
+            with open(res_file) as f:
+                script_body = f.readlines()
+                self.du.chmod(hostname=host, path=res_file, mode=perm,
+                              sudo=True)
+        else:
+            if dirname is None:
+                dirname = self.pbs_conf['PBS_HOME']
+            tmp_file = self.du.create_temp_file(prefix=prefix, suffix=suffix,
+                                                body=script_body,
+                                                hostname=host)
+            res_file = os.path.join(dirname, tmp_file.split(os.path.sep)[-1])
+            self.du.run_copy(host, src=tmp_file, dest=res_file, sudo=True,
+                             preserve_permission=False)
+
+            user = self.user
+            group = pwd.getpwnam(str(user)).pw_gid
+
+            self.du.chown(hostname=host, path=res_file, uid=user, gid=group,
+                          sudo=True)
+            self.du.chmod(hostname=host, path=res_file, mode=perm, sudo=True)
+            if host is None:
+                self.dyn_created_files.append(res_file)
+
+        self.logger.info(self.logprefix + "adding server dyn res " + res_file)
+        self.logger.info("-" * 30)
+        self.logger.info(script_body)
+        self.logger.info("-" * 30)
+
+        a = {'server_dyn_res': '"' + custom_resource + ' !' + res_file + '"'}
+        self.set_sched_config(a, apply=apply, validate=validate)
+        return res_file
+
+    def unset_sched_config(self, name, apply=True):
+        """
+        Delete a ``sched_config`` entry
+
+        :param name: the entry to delete from sched_config
+        :type name: str
+        :param apply: if True, apply configuration. Defaults to True
+        :type apply: bool
+        """
+        self.parse_sched_config()
+        if name not in self.sched_config:
+            return True
+        self.logger.info(self.logprefix + "unsetting config " + name)
+        del self.sched_config[name]
+
+        if apply:
+            return self.apply_config()
+
+    def set_dedicated_time_file(self, filename):
+        """
+        Set the path to a dedicated time
+        """
+        self.logger.info(self.logprefix + " setting dedicated time file to " +
+                         str(filename))
+        self.dedicated_time_file = filename
+
+    def revert_to_defaults(self):
+        """
+        Revert scheduler configuration to defaults.
+
+        :returns: True on success, False otherwise
+        """
+        self.logger.info(self.logprefix +
+                         "reverting configuration to defaults")
+
+        ignore_attrs = ['id', 'pbs_version', 'sched_host',
+                        'state', 'sched_port']
+        unsetattrs = []
+        for k in self.attributes.keys():
+            if k not in ignore_attrs:
+                unsetattrs.append(k)
+        if len(unsetattrs) > 0:
+            self.server.manager(MGR_CMD_UNSET, SCHED, unsetattrs)
+        self.clear_dedicated_time(hup=False)
+        if self.du.cmp(self.hostname, self.dflt_resource_group_file,
+                       self.resource_group_file, sudo=True) != 0:
+            self.du.run_copy(self.hostname, src=self.dflt_resource_group_file,
+                             dest=self.resource_group_file,
+                             preserve_permission=False,
+                             sudo=True, uid=self.user)
+        rc = self.holidays_revert_to_default()
+        if self.du.cmp(self.hostname, self.dflt_sched_config_file,
+                       self.sched_config_file, sudo=True) != 0:
+            self.du.run_copy(self.hostname, src=self.dflt_sched_config_file,
+                             dest=self.sched_config_file,
+                             preserve_permission=False,
+                             sudo=True, uid=self.user)
+        if self.du.cmp(self.hostname, self.dflt_dedicated_file,
+                       self.dedicated_time_file, sudo=True):
+            self.du.run_copy(self.hostname, src=self.dflt_dedicated_file,
+                             dest=self.dedicated_time_file,
+                             preserve_permission=False, sudo=True,
+                             uid=self.user)
+
+        self.signal('-HUP')
+        # Revert fairshare usage
+        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs'), '-e']
+        if self.sc_name is not 'default':
+            cmd += ['-I', self.sc_name]
+        self.du.run_cmd(cmd=cmd, runas=self.user)
+        self.parse_sched_config()
+        if self.platform == 'cray' or self.platform == 'craysim':
+            self.add_resource('vntype')
+            self.add_resource('hbmem')
+        self.fairshare_tree = None
+        self.resource_group = None
+        return self.isUp()
+
+    def create_scheduler(self, sched_home=None):
+        """
+        Start scheduler with creating required directories for scheduler
+        :param sched_home: path of scheduler home and log directory
+        :type sched_home: str
+        """
+        if sched_home is None:
+            sched_home = self.server.pbs_conf['PBS_HOME']
+        sched_priv_dir = os.path.join(sched_home,
+                                      self.attributes['sched_priv'])
+        sched_logs_dir = os.path.join(sched_home,
+                                      self.attributes['sched_log'])
+        if not os.path.exists(sched_priv_dir):
+            self.du.mkdir(path=sched_priv_dir, sudo=True)
+            if self.user.name != 'root':
+                self.du.chown(hostname=self.hostname, path=sched_priv_dir,
+                              sudo=True, uid=self.user)
+            self.du.run_copy(self.hostname, src=self.dflt_resource_group_file,
+                             dest=self.resource_group_file, mode=0o644,
+                             sudo=True, uid=self.user)
+            self.du.run_copy(self.hostname, src=self.dflt_holidays_file,
+                             dest=self.holidays_file, mode=0o644,
+                             sudo=True, uid=self.user)
+            self.du.run_copy(self.hostname, src=self.dflt_sched_config_file,
+                             dest=self.sched_config_file, mode=0o644,
+                             sudo=True, uid=self.user)
+            self.du.run_copy(self.hostname, src=self.dflt_dedicated_file,
+                             dest=self.dedicated_time_file, mode=0o644,
+                             sudo=True, uid=self.user)
+        if not os.path.exists(sched_logs_dir):
+            self.du.mkdir(path=sched_logs_dir, sudo=True)
+            if self.user.name != 'root':
+                self.du.chown(hostname=self.hostname, path=sched_logs_dir,
+                              sudo=True, uid=self.user)
+
+        self.setup_sched_priv(sched_priv=sched_priv_dir)
+
+    def save_configuration(self, outfile=None, mode='w'):
+        """
+        Save scheduler configuration
+
+        :param outfile: Optional Path to a file to which configuration
+                        is saved, when not provided, data is saved in
+                        class variable saved_config
+        :type outfile: str
+        :param mode: mode to use to access outfile. Defaults to
+                     append, 'w'.
+        :type mode: str
+        :returns: True on success and False otherwise
+        """
+        conf = {}
+        if 'sched_priv' in self.attributes:
+            sched_priv = self.attributes['sched_priv']
+        else:
+            sched_priv = os.path.join(
+                self.pbs_conf['PBS_HOME'], 'sched_priv')
+        sc = os.path.join(sched_priv, 'sched_config')
+        self._save_config_file(conf, sc)
+        rg = os.path.join(sched_priv, 'resource_group')
+        self._save_config_file(conf, rg)
+        dt = os.path.join(sched_priv, 'dedicated_time')
+        self._save_config_file(conf, dt)
+        hd = os.path.join(sched_priv, 'holidays')
+        self._save_config_file(conf, hd)
+
+        self.server.saved_config[MGR_OBJ_SCHED] = conf
+        if outfile is not None:
+            try:
+                with open(outfile, mode) as f:
+                    json.dump(self.server.saved_config, f)
+                    self.server.saved_config[MGR_OBJ_SCHED].clear()
+            except:
+                self.logger.error('error saving configuration ' + outfile)
+                return False
+
+        return True
+
+    def load_configuration(self, infile):
+        """
+        load scheduler configuration from saved file infile
+        """
+        rv = self._load_configuration(infile, MGR_OBJ_SCHED)
+        self.signal('-HUP')
+        return rv
+
+    def get_resources(self, exclude=[]):
+        """
+        returns a list of allocatable resources.
+
+        :param exclude: if set, excludes the named resources, if
+                        they exist, from the resulting list
+        :type exclude: List
+        """
+        if 'resources' not in self.sched_config:
+            return None
+        resources = self.sched_config['resources']
+        resources = resources.replace('"', '')
+        resources = resources.replace(' ', '')
+        res = resources.split(',')
+        if len(exclude) > 0:
+            for e in exclude:
+                if e in res:
+                    res.remove(e)
+        return res
+
+    def add_resource(self, name, apply=True):
+        """
+        Add a resource to ``sched_config``.
+
+        :param name: the resource name to add
+        :type name: str
+        :param apply: if True, apply configuration. Defaults to True
+        :type apply: bool
+        :returns: True on success and False otherwise.
+                  Return True if the resource is already defined.
+        """
+        # if the sched_config has not been read in yet, parse it
+        if not self.sched_config:
+            self.parse_sched_config()
+
+        if 'resources' in self.sched_config:
+            resources = self.sched_config['resources']
+            resources = resources.replace('"', '')
+            splitres = [r.strip() for r in resources.split(",")]
+            if name in splitres:
+                return True
+            resources = '"' + resources + ', ' + name + '"'
+        else:
+            resources = '"' + name + '"'
+
+        return self.set_sched_config({'resources': resources}, apply=apply)
+
+    def remove_resource(self, name, apply=True):
+        """
+        Remove a resource to ``sched_config``.
+
+        :param name: the resource name to remove
+        :type name: str
+        :param apply: if True, apply configuration. Defaults to True
+        :type apply: bool
+        :returns: True on success and False otherwise
+        """
+        # if the sched_config has not been read in yet, parse it
+        if not self.sched_config:
+            self.parse_sched_config()
+
+        if 'resources' in self.sched_config:
+            resources = self.sched_config['resources']
+            resources = resources.replace('"', '')
+            splitres = [r.strip() for r in resources.split(",")]
+            if name not in splitres:
+                return True
+
+            newres = []
+            for r in splitres:
+                if r != name:
+                    newres.append(r)
+
+            resources = '"' + ",".join(newres) + '"'
+            return self.set_sched_config({'resources': resources}, apply=apply)
+
+    def holidays_revert_to_default(self, level=logging.INFO):
+        """
+        Revert holidays file to default
+        """
+        self.logger.log(level, self.logprefix +
+                        "reverting holidays file to default")
+
+        rc = None
+        # Copy over the holidays file from PBS_EXEC if it exists
+        if self.du.cmp(self.hostname, self.dflt_holidays_file,
+                       self.holidays_file, sudo=True) != 0:
+            ret = self.du.run_copy(self.hostname, src=self.dflt_holidays_file,
+                                   dest=self.holidays_file,
+                                   preserve_permission=False, sudo=True,
+                                   logerr=True)
+            rc = ret['rc']
+            # Update the internal data structures for the updated file
+            self.holidays_parse_file(level=level)
+        else:
+            rc = 1
+        return rc
+
+    def holidays_parse_file(self, path=None, obj=None, level=logging.INFO):
+        """
+        Parse the existing holidays file
+
+        :param path: optional path to the holidays file to parse
+        :type path: str or None
+        :param obj: optional holidays object to be used instead
+                    of internal
+        :returns: The content of holidays file as a list of lines
+        """
+        self.logger.log(level, self.logprefix + "Parsing holidays file")
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_map = obj._days_map
+        days_set = obj.days_set
+        if path is None:
+            path = self.holidays_file
+        lines = self.du.cat(self.hostname, path, sudo=True)['out']
+
+        content = []    # valid content to return
+
+        self.holidays_delete_entry(
+            'a', apply=False, obj=obj, level=logging.DEBUG)
+
+        for line in lines:
+            entry = str(line).split()
+            if len(entry) == 0:
+                continue
+            tag = entry[0].lower()
+            if tag == "year":   # initialize year
+                content.append("\t".join(entry))
+                obj.year['valid'] = True
+                if len(entry) > 1:
+                    obj.year['value'] = entry[1]
+            elif tag in days_map.keys():   # initialize a day
+                content.append("\t".join(entry))
+                day = days_map[tag]
+                day['valid'] = True
+                days_set.append(day)
+                day['position'] = len(days_set) - 1
+                if len(entry) > 1:
+                    day['p'] = entry[1]
+                if len(entry) > 2:
+                    day['np'] = entry[2]
+            elif tag.isdigit():   # initialize a holiday
+                content.append("\t".join(entry))
+                obj.holidays.append(tag)
+            else:
+                pass
+        return content
+
+    def holidays_set_day(self, day_id, prime="", nonprime="", apply=True,
+                         obj=None, level=logging.INFO):
+        """
+        Set prime time values for a day
+
+        :param day_id: the day to be set (string)
+        :type day_id: str
+        :param prime: the prime time value
+        :param nonprime: the non-prime time value
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+        :returns: The position ``(0-7)`` of the set day
+        """
+        self.logger.log(level, self.logprefix +
+                        "setting holidays file entry for %s",
+                        day_id)
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        day = obj._days_map[str(day_id).lower()]
+        days_set = obj.days_set
+
+        if day['valid'] is None:    # Fresh entry
+            days_set.append(day)
+            day['position'] = len(days_set) - 1
+        elif day['valid'] is False:  # Previously invalidated entry
+            days_set.insert(day['position'], day)
+        else:
+            pass
+
+        day['valid'] = True
+        day['p'] = str(prime)
+        day['np'] = str(nonprime)
+
+        self.logger.debug("holidays_set_day(): changed day struct: " +
+                          str(day))
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+        return day['position']
+
+    def holidays_get_day(self, day_id, obj=None, level=logging.INFO):
+        """
+        :param obj: optional holidays object to be used instead
+                    of internal
+        :param day_id: either a day's name or "all"
+        :type day_id: str
+        :returns: A copy of info about a day/all set days
+        """
+        self.logger.log(level, self.logprefix +
+                        "getting holidays file entry for " +
+                        day_id)
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_set = obj.days_set
+        days_map = obj._days_map
+
+        if day_id == "all":
+            return days_set[:]
+        else:
+            return days_map[day_id].copy()
+
+    def holidays_reposition_day(self, day_id, new_pos, apply=True, obj=None,
+                                level=logging.INFO):
+        """
+        Change position of a day ``(0-7)`` as it appears in the
+        holidays file
+
+        :param day_id: name of the day
+        :type day_id: str
+        :param new_pos: new position
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+        :returns: The new position of the day
+        """
+        self.logger.log(level, self.logprefix +
+                        "repositioning holidays file entry for " +
+                        day_id + " to position " + str(new_pos))
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_map = obj._days_map
+        days_set = obj.days_set
+        day = days_map[str(day_id).lower()]
+
+        if new_pos == day['position']:
+            return
+
+        # We also want to update order of invalid days, so add them to
+        # days_set temporarily
+        invalid_days = []
+        for name in days_map:
+            if days_map[name]['valid'] is False:
+                invalid_days.append(days_map[name])
+        days_set += invalid_days
+
+        # Sort the old list
+        days_set.sort(key=itemgetter('position'))
+
+        # Change position of 'day_id'
+        day['position'] = new_pos
+        days_set.remove(day)
+        days_set.insert(new_pos, day)
+
+        # Update the 'position' field
+        for i in range(0, len(days_set)):
+            days_set[i]['position'] = i
+
+        # Remove invalid days from days_set
+        len_days_set = len(days_set)
+        days_set = [days_set[i] for i in range(0, len_days_set)
+                    if days_set[i] not in invalid_days]
+
+        self.logger.debug("holidays_reposition_day(): List of days after " +
+                          " re-positioning " + str(day_id) + " is:\n" +
+                          str(days_set))
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+        return new_pos
+
+    def holidays_unset_day(self, day_id, apply=True, obj=None,
+                           level=logging.INFO):
+        """
+        Unset prime time values for a day
+
+        :param day_id: day to unset (string)
+        :type day_id: str
+        :param apply: to reflect the changes to file
+        :param obj: optional holidays object to be used instead
+                    of internal
+
+        .. note:: we do not unset the 'valid' field here so the entry
+                  will still be displayed but without any values
+        """
+        self.logger.log(level, self.logprefix +
+                        "unsetting holidays file entry for " + day_id)
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        day = obj._days_map[str(day_id).lower()]
+        day['p'] = ""
+        day['np'] = ""
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+    def holidays_invalidate_day(self, day_id, apply=True, obj=None,
+                                level=logging.INFO):
+        """
+        Remove a day's entry from the holidays file
+
+        :param day_id: the day to remove (string)
+        :type day_id: str
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+        """
+        self.logger.log(level, self.logprefix +
+                        "invalidating holidays file entry for " +
+                        day_id)
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_map = obj._days_map
+        days_set = obj.days_set
+
+        day = days_map[str(day_id).lower()]
+        day['valid'] = False
+        days_set.remove(day)
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+    def holidays_validate_day(self, day_id, apply=True, obj=None,
+                              level=logging.INFO):
+        """
+        Make valid a previously set day's entry
+
+        :param day_id: the day to validate (string)
+        :type day_id: str
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+
+        .. note:: The day will retain its previous position in
+                  the file
+        """
+        self.logger.log(level, self.logprefix +
+                        "validating holidays file entry for " +
+                        day_id)
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_map = obj._days_map
+        days_set = obj.days_set
+
+        day = days_map[str(day_id).lower()]
+        if day in days_set:  # do not insert a pre-existing day
+            self.logger.debug("holidays_validate_day(): " +
+                              day_id + " is already valid!")
+            return
+
+        day['valid'] = True
+        days_set.insert(day['position'], day)
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+    def holidays_delete_entry(self, entry_type, idx=None, apply=True,
+                              obj=None, level=logging.INFO):
+        """
+        Delete ``one/all`` entries from holidays file
+
+        :param entry_type: 'y':year, 'd':day, 'h':holiday or 'a': all
+        :type entry_type: str
+        :param idx: either a day of week (monday, tuesday etc.)
+                    or Julian date  of a holiday
+        :type idx: str or None
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead of
+                    internal
+        :returns: False if entry_type is invalid, otherwise True
+
+        .. note:: The day cannot be validated and will lose it's
+                  position in the file
+        """
+        self.logger.log(level, self.logprefix +
+                        "Deleting entries from holidays file")
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_map = obj._days_map
+        days_set = obj.days_set
+        holiday_list = obj.holidays
+        year = obj.year
+
+        if entry_type not in ['a', 'y', 'd', 'h']:
+            return False
+
+        if entry_type == 'y' or entry_type == 'a':
+            self.logger.debug(self.logprefix +
+                              "deleting year entry from holidays file")
+            # Delete year entry
+            year['value'] = None
+            year['valid'] = False
+
+        if entry_type == 'd' or entry_type == 'a':
+            # Delete one/all day entries
+            num_days_to_delete = 1
+            if entry_type == 'a':
+                self.logger.debug(self.logprefix +
+                                  "deleting all days from holidays file")
+                num_days_to_delete = len(days_set)
+            for i in range(0, num_days_to_delete):
+                if (entry_type == 'd'):
+                    self.logger.debug(self.logprefix +
+                                      "deleting " + str(idx) +
+                                      " entry from holidays file")
+                    day = days_map[str(idx).lower()]
+                else:
+                    day = days_set[0]
+
+                day['p'] = None
+                day['np'] = None
+                day['valid'] = None
+                day['position'] = None
+                days_set.remove(day)
+                if entry_type == 'd':
+                    # Correct 'position' field of every day
+                    for i in range(0, len(days_set)):
+                        days_set[i]['position'] = i
+
+        if entry_type == 'h' or entry_type == 'a':
+            # Delete one/all calendar holiday entries
+            if entry_type == 'a':
+                self.logger.debug(self.logprefix +
+                                  "deleting all holidays from holidays file")
+                del holiday_list[:]
+            else:
+                self.logger.debug(self.logprefix +
+                                  "deleting holiday on " + str(idx) +
+                                  " from holidays file")
+                holiday_list.remove(str(idx))
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+        return True
+
+    def holidays_set_year(self, new_year="", apply=True, obj=None,
+                          level=logging.INFO):
+        """
+        Set the year value
+
+        :param newyear: year value to set
+        :type newyear: str
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+        """
+        self.logger.log(level, self.logprefix +
+                        "setting holidays file year entry to " +
+                        str(new_year))
+        if obj is None:
+            obj = self.holidays_obj
+
+        year = obj.year
+
+        year['value'] = str(new_year)
+        year['valid'] = True
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+    def holidays_unset_year(self, apply=True, obj=None, level=logging.INFO):
+        """
+        Unset the year value
+
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+        """
+        self.logger.log(level, self.logprefix +
+                        "unsetting holidays file year entry")
+        if obj is None:
+            obj = self.holidays_obj
+
+        obj.year['value'] = ""
+
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+    def holidays_get_year(self, obj=None, level=logging.INFO):
+        """
+        :param obj: optional holidays object to be used instead
+                    of internal
+        :returns: The year entry of holidays file
+        """
+        self.logger.log(level, self.logprefix +
+                        "getting holidays file year entry")
+        if obj is None:
+            obj = self.holidays_obj
+
+        year = obj.year
+        return year.copy()
+
+    def holidays_add_holiday(self, date=None, apply=True, obj=None,
+                             level=logging.INFO):
+        """
+        Add a calendar holiday to the holidays file
+
+        :param date: Date value for the holiday
+        :param apply: to reflect the changes to file
+        :type apply: bool
+        :param obj: optional holidays object to be used instead
+                    of internal
+        """
+        self.logger.log(level, self.logprefix +
+                        "adding holiday " + str(date) +
+                        " to holidays file")
+        if obj is None:
+            obj = self.holidays_obj
+
+        holiday_list = obj.holidays
+
+        if date is not None:
+            holiday_list.append(str(date))
+        else:
+            pass
+        self.logger.debug("holidays list after adding one: " +
+                          str(holiday_list))
+        if apply:
+            self.holidays_write_file(obj=obj, level=logging.DEBUG)
+
+    def holidays_get_holidays(self, obj=None, level=logging.INFO):
+        """
+        :param obj: optional holidays object to be used instead
+                    of internal
+        :returns: The list of holidays in holidays file
+        """
+        self.logger.log(level, self.logprefix +
+                        "retrieving list of holidays")
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        holiday_list = obj.holidays
+        return holiday_list[:]
+
+    def _holidays_process_content(self, content, obj=None):
+        """
+        Process a user provided list of holidays file content
+
+        :param obj: optional holidays object to be used instead
+                    of internal
+        """
+        self.logger.debug("_holidays_process_content(): " +
+                          "Processing user provided holidays content:\n" +
+                          str(content))
+        if obj is None:
+            obj = self.holidays_obj
+
+        days_map = obj._days_map
+        year = obj.year
+        holiday_list = obj.holidays
+        days_set = obj.days_set
+
+        self.holidays_delete_entry(
+            'a', apply=False, obj=obj, level=logging.DEBUG)
+
+        if content is None:
+            self.logger.debug("Holidays file was wiped out")
+            return
+
+        for line in content:
+            entry = line.split()
+            if len(entry) == 0:
+                continue
+            tag = entry[0].lower()
+            if tag == "year":   # initialize self.year
+                year['valid'] = True
+                if len(entry) > 1:
+                    year['value'] = entry[1]
+            elif tag in days_map.keys():   # initialize self.<day>
+                day = days_map[tag]
+                day['valid'] = True
+                days_set.append(day)
+                day['position'] = len(days_set) - 1
+                if len(entry) > 1:
+                    day['p'] = entry[1]
+                if len(entry) > 2:
+                    day['np'] = entry[2]
+            elif tag.isdigit():   # initialize self.holiday
+                holiday_list.append(tag)
+            else:
+                pass
+
+    def holidays_write_file(self, content=None, out_path=None,
+                            hup=True, obj=None, level=logging.INFO):
+        """
+        Write to the holidays file with content ``given/generated``
+
+        :param hup: SIGHUP the scheduler after writing the holidays
+                    file
+        :type hup: bool
+        :param obj: optional holidays object to be used instead of
+                    internal
+        """
+        self.logger.log(level, self.logprefix +
+                        "Writing to the holidays file")
+
+        if obj is None:
+            obj = self.holidays_obj
+
+        if out_path is None:
+            out_path = self.holidays_file
+
+        if content is not None:
+            self._holidays_process_content(content, obj)
+        else:
+            content = str(obj)
+
+        self.logger.debug("content being written:\n" + str(content))
+
+        fn = self.du.create_temp_file(self.hostname, body=content)
+        ret = self.du.run_copy(self.hostname, src=fn, dest=out_path,
+                               preserve_permission=False, sudo=True)
+        self.du.rm(self.hostname, fn)
+
+        if ret['rc'] != 0:
+            raise PbsSchedConfigError(rc=ret['rc'], rv=ret['out'],
+                                      msg=('error applying holidays file' +
+                                           ret['err']))
+        if hup:
+            rv = self.signal('-HUP')
+            if not rv:
+                raise PbsSchedConfigError(rc=1, rv=False,
+                                          msg='error applying holidays file')
+        return True
+
+    def parse_dedicated_time(self, file=None):
+        """
+        Parse the dedicated_time file and populate dedicated times
+        as both a string dedicated_time array of dictionaries defined
+        as ``[{'from': datetime, 'to': datetime}, ...]`` as well as a
+        dedicated_time_as_str array with a string representation of
+        each entry
+
+        :param file: optional file to parse. Defaults to the one under
+                     ``PBS_HOME/sched_priv``
+        :type file: str or None
+
+        :returns: The dedicated_time list of dictionaries or None on
+                  error.Return an empty array if dedicated time file
+                  is empty.
+        """
+        self.dedicated_time_as_str = []
+        self.dedicated_time = []
+
+        if file:
+            dt_file = file
+        elif self.dedicated_time_file:
+            dt_file = self.dedicated_time_file
+        else:
+            dt_file = os.path.join(self.pbs_conf['PBS_HOME'], 'sched_priv',
+                                   'dedicated_time')
+        try:
+            lines = self.du.cat(self.hostname, dt_file, sudo=True)['out']
+            if lines is None:
+                return []
+
+            for line in lines:
+                if not line.startswith('#') and len(line) > 0:
+                    self.dedicated_time_as_str.append(line)
+                    (dtime_from, dtime_to) = self.utils.convert_dedtime(line)
+                    self.dedicated_time.append({'from': dtime_from,
+                                                'to': dtime_to})
+        except:
+            self.logger.error('error in parse_dedicated_time')
+            return None
+
+        return self.dedicated_time
+
+    def clear_dedicated_time(self, hup=True):
+        """
+        Clear the dedicated time file
+        """
+        self.parse_dedicated_time()
+        if ((len(self.dedicated_time) == 0) and
+                (len(self.dedicated_time_as_str) == 0)):
+            return True
+        if self.dedicated_time:
+            for d in self.dedicated_time:
+                del d
+        if self.dedicated_time_as_str:
+            for d in self.dedicated_time_as_str:
+                del d
+        self.dedicated_time = []
+        self.dedicated_time_as_str = []
+        dt = "# FORMAT: MM/DD/YYYY HH:MM MM/DD/YYYY HH:MM"
+        return self.add_dedicated_time(dt, hup=hup)
+
+    def add_dedicated_time(self, as_str=None, start=None, end=None, hup=True):
+        """
+        Append a dedicated time entry. The function can be called
+        in one of two ways, either by passing in start and end as
+        time values, or by passing as_str, a string that gets
+        appended to the dedicated time entries and formatted as
+        follows, note that no check on validity of the format will
+        be made the function uses strftime to parse the datetime
+        and will fail if the strftime can not convert the string.
+        ``MM/DD/YYYY HH:MM MM/DD/YYYY HH:MM``
+
+        :returns: True on success and False otherwise
+        """
+        if self.dedicated_time is None:
+            self.parse_dedicated_time()
+
+        if start is not None and end is not None:
+            dtime_from = time.strftime("%m/%d/%Y %H:%M", time.localtime(start))
+            dtime_to = time.strftime("%m/%d/%Y %H:%M", time.localtime(end))
+            dedtime = dtime_from + " " + dtime_to
+        elif as_str is not None:
+            (dtime_from, dtime_to) = self.utils.convert_dedtime(as_str)
+            dedtime = as_str
+        else:
+            self.logger.warning("no dedicated from/to specified")
+            return True
+
+        for d in self.dedicated_time_as_str:
+            if dedtime == d:
+                if dtime_from is None or dtime_to is None:
+                    self.logger.info(self.logprefix +
+                                     "dedicated time already defined")
+                else:
+                    self.logger.info(self.logprefix +
+                                     "dedicated time from " + dtime_from +
+                                     " to " + dtime_to + " already defined")
+                return True
+
+        if dtime_from is not None and dtime_to is not None:
+            self.logger.info(self.logprefix +
+                             "adding dedicated time " + dedtime)
+
+        self.dedicated_time_as_str.append(dedtime)
+        if dtime_from is not None and dtime_to is not None:
+            self.dedicated_time.append({'from': dtime_from, 'to': dtime_to})
+        try:
+            fn = self.du.create_temp_file()
+            with open(fn, "w") as fd:
+                for l in self.dedicated_time_as_str:
+                    fd.write(l + '\n')
+            ddfile = os.path.join(self.pbs_conf['PBS_HOME'], 'sched_priv',
+                                  'dedicated_time')
+            self.du.run_copy(self.hostname, src=fn, dest=ddfile, sudo=True,
+                             preserve_permission=False)
+            os.remove(fn)
+        except:
+            raise PbsSchedConfigError(rc=1, rv=False,
+                                      msg='error adding dedicated time')
+
+        if hup:
+            ret = self.signal('-HUP')
+            if ret['rc'] != 0:
+                raise PbsSchedConfigError(rc=1, rv=False,
+                                          msg='error adding dedicated time')
+
+        return True
+
+    def terminate(self):
+        self.signal('-KILL')
+
+    def valgrind(self):
+        """
+        run scheduler instance through valgrind
+        """
+        if self.isUp():
+            self.terminate()
+
+        rv = CliUtils().check_bin('valgrind')
+        if not rv:
+            self.logger.error(self.logprefix + 'valgrind not available')
+            return None
+
+        cmd = ['valgrind']
+
+        cmd += ["--log-file=" + os.path.join(tempfile.gettempdir(),
+                                             'schd.vlgrd')]
+        cmd += [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbs_sched')]
+
+        return self.du.run_cmd(self.hostname, cmd, sudo=True)
+
+    def alloc_to_execvnode(self, chunks):
+        """
+        convert a resource allocation to an execvnode string representation
+        """
+        execvnode = []
+        for chunk in chunks:
+            execvnode += ["(" + chunk.vnode]
+            for res, val in chunk.resources.items():
+                execvnode += [":" + str(res) + "=" + str(val)]
+            for vchk in chunk.vchunk:
+                execvnode += ["+" + vchk.vnode]
+                for res, val in vchk.resources():
+                    execvnode += [":" + str(res) + "=" + str(val)]
+            execvnode += [")+"]
+
+        if len(execvnode) != 0:
+            ev = execvnode[len(execvnode) - 1]
+            ev = ev[:-1]
+            execvnode[len(execvnode) - 1] = ev
+
+        return "".join(execvnode)
+
+    def cycles(self, start=None, end=None, firstN=None, lastN=None):
+        """
+        Analyze scheduler log and return cycle information
+
+        :param start: Optional setting of the start time to consider
+        :param end: Optional setting of the end time to consider
+        :param firstN: Optional setting to consider the given first
+                       N cycles
+        :param lastN: Optional setting to consider only the given
+                      last N cycles
+        """
+        try:
+            from ptl.utils.pbs_logutils import PBSSchedulerLog
+        except:
+            self.logger.error('error loading ptl.utils.pbs_logutils')
+            return None
+
+        if 'sched_log' in self.attributes:
+            logdir = self.attributes['sched_log']
+        else:
+            logdir = os.path.join(self.pbs_conf['PBS_HOME'], 'sched_logs')
+
+        tm = time.strftime("%Y%m%d", time.localtime())
+        log_file = os.path.join(logdir, tm)
+
+        if start is not None or end is not None:
+            analyze_path = os.path.dirname(log_file)
+        else:
+            analyze_path = log_file
+
+        sl = PBSSchedulerLog()
+        sl.analyze(analyze_path, start, end, self.hostname)
+        cycles = sl.cycles
+        if cycles is None or len(cycles) == 0:
+            return []
+
+        if lastN is not None:
+            return cycles[-lastN:]
+        elif firstN is not None:
+            return cycles[:firstN]
+
+        return cycles
+
+    def query_fairshare(self, name=None, id=None):
+        """
+        Parse fairshare data using ``pbsfs`` and populates
+        fairshare_tree.If name or id are specified, return the data
+        associated to that id.Otherwise return the entire fairshare
+        tree
+        """
+        if self.has_snap:
+            return None
+
+        tree = FairshareTree()
+        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
+        if self.sc_name != 'default':
+            cmd += ['-I', self.sc_name]
+
+        ret = self.du.run_cmd(self.hostname, cmd=cmd,
+                              sudo=True, logerr=False)
+
+        if ret['rc'] != 0:
+            raise PbsFairshareError(rc=ret['rc'], rv=None,
+                                    msg=str(ret['err']))
+        pbsfs = ret['out']
+        for p in pbsfs:
+            m = self.fs_tag.match(p)
+            if m:
+                usage = int(m.group('Usage'))
+                perc = float(m.group('Perc'))
+                nm = m.group('name')
+                cgrp = int(m.group('cgrp'))
+                pid = int(m.group('Grp'))
+                nd = tree.get_node(id=pid)
+                if nd:
+                    pname = nd.parent_name
+                else:
+                    pname = None
+                # if an entity has a negative cgroup it should belong
+                # to the unknown resource, we work around the fact that
+                # PBS (up to 13.0) sets this cgroup id to -1 by
+                # reassigning it to 0
+                # TODO: cleanup once PBS code is updated
+                if cgrp < 0:
+                    cgrp = 0
+                node = FairshareNode(name=nm,
+                                     id=cgrp,
+                                     parent_id=pid,
+                                     parent_name=pname,
+                                     nshares=int(m.group('Shares')),
+                                     usage=usage,
+                                     perc={'TREEROOT': perc})
+                if perc:
+                    node.prio['TREEROOT'] = float(usage) / perc
+                if nm == name or id == cgrp:
+                    return node
+
+                tree.add_node(node, apply=False)
+        # now that all nodes are known, update parent and child
+        # relationship of the tree
+        tree.update()
+
+        for node in tree.nodes.values():
+            pnode = node._parent
+            while pnode is not None and pnode.id != 0:
+                if pnode.perc['TREEROOT']:
+                    node.perc[pnode.name] = \
+                        (node.perc['TREEROOT'] * 100 / pnode.perc[
+                         'TREEROOT'])
+                if pnode.name in node.perc and node.perc[pnode.name]:
+                    node.prio[pnode.name] = (
+                        node.usage / node.perc[pnode.name])
+                pnode = pnode._parent
+
+        if name:
+            n = tree.get_node(name)
+            if n is None:
+                raise PbsFairshareError(rc=1, rv=None,
+                                        msg='Unknown entity ' + name)
+            return n
+        if id:
+            n = tree.get_node(id=id)
+            raise PbsFairshareError(rc=1, rv=None,
+                                    msg='Unknown entity ' + str(id))
+            return n
+        return tree
+
+    def set_fairshare_usage(self, name=None, usage=None):
+        """
+        Set the fairshare usage associated to a given entity.
+
+        :param name: The entity to set the fairshare usage of
+        :type name: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser` or None
+        :param usage: The usage value to set
+        """
+        if self.has_snap:
+            return True
+
+        if name is None:
+            self.logger.error(self.logprefix + ' an entity name required')
+            return False
+
+        if isinstance(name, PbsUser):
+            name = str(name)
+
+        if usage is None:
+            self.logger.error(self.logprefix + ' a usage is required')
+            return False
+
+        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
+        if self.sc_name is not 'default':
+            cmd += ['-I', self.sc_name]
+        cmd += ['-s', name, str(usage)]
+        ret = self.du.run_cmd(self.hostname, cmd, runas=self.user)
+        if ret['rc'] == 0:
+            return True
+        return False
+
+    def decay_fairshare_tree(self):
+        """
+        Decay the fairshare tree through pbsfs
+        """
+        if self.has_snap:
+            return True
+
+        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
+        if self.sc_name is not 'default':
+            cmd += ['-I', self.sc_name]
+        cmd += ['-d']
+
+        ret = self.du.run_cmd(self.hostname, cmd, runas=self.user)
+        if ret['rc'] == 0:
+            self.fairshare_tree = self.query_fairshare()
+            return True
+        return False
+
+    def cmp_fairshare_entities(self, name1=None, name2=None):
+        """
+        Compare two fairshare entities. Wrapper of ``pbsfs -c e1 e2``
+
+        :param name1: name of first entity to compare
+        :type name1: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser` or None
+        :param name2: name of second entity to compare
+        :type name2: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser` or None
+        :returns: the name of the entity of higher priority or None on error
+        """
+        if self.has_snap:
+            return None
+
+        if name1 is None or name2 is None:
+            self.logger.erro(self.logprefix + 'two fairshare entity names ' +
+                             'required')
+            return None
+
+        if isinstance(name1, PbsUser):
+            name1 = str(name1)
+
+        if isinstance(name2, PbsUser):
+            name2 = str(name2)
+
+        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
+        if self.sc_name is not 'default':
+            cmd += ['-I', self.sc_name]
+        cmd += ['-c', name1, name2]
+        ret = self.du.run_cmd(self.hostname, cmd, runas=self.user)
+        if ret['rc'] == 0:
+            return ret['out'][0]
+        return None
+
+    def parse_resource_group(self, hostname=None, resource_group=None):
+        """
+        Parse the Scheduler's ``resource_group`` file
+
+        :param hostname: The name of the host from which to parse
+                         resource_group
+        :type hostname: str or None
+        :param resource_group: The path to a resource_group file
+        :type resource_group: str or None
+        :returns: A fairshare tree
+        """
+
+        if hostname is None:
+            hostname = self.hostname
+        # if resource_group is None:
+        resource_group = self.resource_group_file
+        # if.has_snap is True acces to sched_priv may not require su privilege
+        ret = self.du.cat(hostname, resource_group, sudo=(not self.has_snap))
+        if ret['rc'] != 0:
+            self.logger.error(hostname + ' error reading ' + resource_group)
+        tree = FairshareTree(hostname, resource_group)
+        root = FairshareNode('root', -1, parent_id=0, nshares=100)
+        tree.add_node(root, apply=False)
+        lines = ret['out']
+        for line in lines:
+            line = line.strip()
+            if not line.startswith("#") and len(line) > 0:
+                # could have 5th column but we only need the first 4
+                (name, id, parent, nshares) = line.split()[:4]
+                node = FairshareNode(name, id, parent_name=parent,
+                                     nshares=nshares)
+                tree.add_node(node, apply=False)
+        tree.update()
+        return tree
+
+    def add_to_resource_group(self, name, fairshare_id, parent, nshares,
+                              validate=True):
+        """
+        Add an entry to the resource group file
+
+        :param name: The name of the entity to add
+        :type name: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser`
+        :param fairshare_id: The numeric identifier of the entity to add
+        :type fairshare_id: int
+        :param parent: The name of the parent group
+        :type parent: str
+        :param nshares: The number of shares associated to the entity
+        :type nshares: int
+        :param validate: if True (the default), validate the
+                         configuration settings.
+        :type validate: bool
+        """
+        if self.resource_group is None:
+            self.resource_group = self.parse_resource_group(
+                self.hostname, self.resource_group_file)
+        if not self.resource_group:
+            self.resource_group = FairshareTree(
+                self.hostname, self.resource_group_file)
+        if isinstance(name, PbsUser):
+            name = str(name)
+        reconfig_time = time.time()
+        rc = self.resource_group.create_node(name, fairshare_id,
+                                             parent_name=parent,
+                                             nshares=nshares)
+        if validate:
+            self.get_pid()
+            self.signal('-HUP')
+            try:
+                self.log_match("Sched;reconfigure;Scheduler is reconfiguring",
+                               starttime=reconfig_time)
+                self.log_match("fairshare;resgroup: error ",
+                               starttime=reconfig_time, existence=False,
+                               max_attempts=2)
+            except PtlLogMatchError:
+                _msg = 'Error in validating resource_group changes'
+                raise PbsSchedConfigError(rc=1, rv=False,
+                                          msg=_msg)
+        return rc
+
+    def job_formula(self, jobid=None, starttime=None, max_attempts=None):
+        """
+        Extract formula value out of scheduler log
+
+        :param jobid: Optional, the job identifier for which to get
+                      the formula.
+        :type jobid: str or int
+        :param starttime: The time at which to start parsing the
+                          scheduler log
+        :param max_attempts: The number of attempts to search for
+                             formula in the logs
+        :type max_attempts: int
+        :returns: If jobid is specified, return the formula value
+                  associated to that job if no jobid is specified,
+                  returns a dictionary mapping job ids to formula
+        """
+        if jobid is None:
+            jobid = "(?P<jobid>.*)"
+            _alljobs = True
+        else:
+            if isinstance(jobid, int):
+                jobid = str(jobid)
+            _alljobs = False
+
+        formula_pat = (".*Job;" + jobid +
+                       ".*;Formula Evaluation = (?P<fval>.*)")
+        if max_attempts is None:
+            max_attempts = self.ptl_conf['max_attempts']
+        rv = self.log_match(formula_pat, regexp=True, starttime=starttime,
+                            n='ALL', allmatch=True,
+                            max_attempts=max_attempts)
+        ret = {}
+        if rv:
+            for _, l in rv:
+                m = re.match(formula_pat, l)
+                if m:
+                    if _alljobs:
+                        jobid = m.group('jobid')
+                    ret[jobid] = float(m.group('fval').strip())
+
+        if not _alljobs:
+            if jobid in ret:
+                return ret[jobid]
+            else:
+                return
+        return ret
+
+
 class Comm(PBSService):
 
     """
@@ -5166,6 +4475,11 @@ class Server(PBSService):
         if self.platform == 'cray' or self.platform == 'craysim':
             setdict[ATTR_restrict_res_to_release_on_suspend] = 'ncpus'
         if delhooks:
+            if (self.platform == 'cray' or self.platform == 'craysim' or
+                    self.platform == 'shasta'):
+                reverthooks = True
+            else:
+                reverthooks = False
             self.delete_site_hooks()
         if delqueues:
             revertqueues = False
@@ -10728,2438 +10042,6 @@ class Server(PBSService):
                     pass
 
 
-class EquivClass(PBSObject):
-
-    """
-    Equivalence class holds information on a collection of entities
-    grouped according to a set of attributes
-    :param attributes: Dictionary of attributes
-    :type attributes: Dictionary
-    :param entities: List of entities
-    :type entities: List
-    """
-
-    def __init__(self, name, attributes={}, entities=[]):
-        self.name = name
-        self.attributes = attributes
-        self.entities = entities
-
-    def add_entity(self, entity):
-        """
-        Add entities
-
-        :param entity: Entity to add
-        :type entity: str
-        """
-        if entity not in self.entities:
-            self.entities.append(entity)
-
-    def __str__(self):
-        s = [str(len(self.entities)), ":", ":".join(self.name)]
-        return "".join(s)
-
-    def show(self, showobj=False):
-        """
-        Show the entities
-
-        :param showobj: If true then show the entities
-        :type showobj: bool
-        """
-        s = " && ".join(self.name) + ': '
-        if showobj:
-            s += str(self.entities)
-        else:
-            s += str(len(self.entities))
-        print(s)
-        return s
-
-
-class Resource(PBSObject):
-
-    """
-    PBS resource referenced by name, type and flag
-
-    :param name: Resource name
-    :type name: str or None
-    :param type: Type of resource
-    """
-
-    def __init__(self, name=None, type=None, flag=None):
-        PBSObject.__init__(self, name)
-        self.set_name(name)
-        self.set_type(type)
-        self.set_flag(flag)
-
-    def __del__(self):
-        del self.__dict__
-
-    def set_name(self, name):
-        """
-        Set the resource name
-        """
-        self.name = name
-        self.attributes['id'] = name
-
-    def set_type(self, type):
-        """
-        Set the resource type
-        """
-        self.type = type
-        self.attributes['type'] = type
-
-    def set_flag(self, flag):
-        """
-        Set the flag
-        """
-        self.flag = flag
-        self.attributes['flag'] = flag
-
-    def __str__(self):
-        s = [self.attributes['id']]
-        if 'type' in self.attributes:
-            s.append('type=' + self.attributes['type'])
-        if 'flag' in self.attributes:
-            s.append('flag=' + self.attributes['flag'])
-        return " ".join(s)
-
-
-class Holidays():
-    """
-    Descriptive calss for Holiday file.
-    """
-
-    def __init__(self):
-        self.year = {'id': "YEAR", 'value': None, 'valid': False}
-        self.weekday = {'id': "weekday", 'p': None, 'np': None, 'valid': None,
-                        'position': None}
-        self.monday = {'id': "monday", 'p': None, 'np': None, 'valid': None,
-                       'position': None}
-        self.tuesday = {'id': "tuesday", 'p': None, 'np': None, 'valid': None,
-                        'position': None}
-        self.wednesday = {'id': "wednesday", 'p': None, 'np': None,
-                          'valid': None, 'position': None}
-        self.thursday = {'id': "thursday", 'p': None, 'np': None,
-                         'valid': None, 'position': None}
-        self.friday = {'id': "friday", 'p': None, 'np': None, 'valid': None,
-                       'position': None}
-        self.saturday = {'id': "saturday", 'p': None, 'np': None,
-                         'valid': None, 'position': None}
-        self.sunday = {'id': "sunday", 'p': None, 'np': None, 'valid': None,
-                       'position': None}
-
-        self.days_set = []  # list of set days
-        self._days_map = {'weekday': self.weekday, 'monday': self.monday,
-                          'tuesday': self.tuesday, 'wednesday': self.wednesday,
-                          'thursday': self.thursday, 'friday': self.friday,
-                          'saturday': self.saturday, 'sunday': self.sunday}
-        self.holidays = []  # list of calendar holidays
-
-    def __str__(self):
-        """
-        Return the content to write to holidays file as a string
-        """
-        content = []
-        if self.year['valid']:
-            content.append(self.year['id'] + "\t" +
-                           self.year['value'])
-
-        for i in range(0, len(self.days_set)):
-            content.append(self.days_set[i]['id'] + "\t" +
-                           self.days_set[i]['p'] + "\t" +
-                           self.days_set[i]['np'])
-
-        # Add calendar holidays
-        for day in self.holidays:
-            content.append(day)
-
-        return "\n".join(content)
-
-
-class Scheduler(PBSService):
-
-    """
-    Container of Scheduler related properties
-
-    :param hostname: The hostname on which the scheduler instance
-                     is operating
-    :type hostname: str or None
-    :param server: A PBS server instance to which this scheduler
-                   is associated
-    :param pbsconf_file: path to a PBS configuration file
-    :type pbsconf_file: str or None
-    :param snapmap: A dictionary of PBS objects (node,server,etc)
-                    to mapped files from PBS snap directory
-    :type snapmap: Dictionary
-    :param snap: path to PBS snap directory (This will overrides
-                 snapmap)
-    :type snap: str or None
-    :param db_acccess: set to either file containing credentials
-                       to DB access or dictionary containing
-                       ``{'dbname':...,'user':...,'port':...}``
-    :type db_access: str or dictionary
-    """
-
-    # A vanilla scheduler configuration. This set may change based on
-    # updates to PBS
-    sched_dflt_config = {
-        "backfill": "true        ALL",
-        "backfill_prime": "false ALL",
-        "help_starving_jobs": "true     ALL",
-        "max_starve": "24:00:00",
-        "strict_ordering": "false ALL",
-        "provision_policy": "\"aggressive_provision\"",
-        "preempt_order": "\"SCR\"",
-        "fairshare_entity": "euser",
-        "dedicated_prefix": "ded",
-        "primetime_prefix": "p_",
-        "nonprimetime_prefix": "np_",
-        "preempt_queue_prio": "150",
-        "preempt_prio": "\"express_queue, normal_jobs\"",
-        "prime_exempt_anytime_queues": "false",
-        "round_robin": "False    all",
-        "fairshare_usage_res": "cput",
-        "smp_cluster_dist": "pack",
-        "fair_share": "false     ALL",
-        "preempt_sort": "min_time_since_start",
-        "node_sort_key": "\"sort_priority HIGH\" ALL",
-        "sort_queues": "true     ALL",
-        "by_queue": "True                ALL",
-        "preemptive_sched": "true        ALL",
-        "resources": "\"ncpus, mem, arch, host, vnode, aoe\"",
-    }
-
-    sched_config_options = ["node_group_key",
-                            "dont_preempt_starving",
-                            "fairshare_enforce_no_shares",
-                            "strict_ordering",
-                            "resource_unset_infinite",
-                            "unknown_shares",
-                            "dedicated_prefix",
-                            "help_starving_jobs",
-                            "max_starve",
-                            "sort_queues",
-                            "backfill",
-                            "primetime_prefix",
-                            "nonprimetime_prefix",
-                            "backfill_prime",
-                            "prime_exempt_anytime_queues",
-                            "prime_spill",
-                            "prime_exempt_anytime_queues",
-                            "prime_spill",
-                            "resources",
-                            "mom_resources",
-                            "smp_cluster_dist",
-                            "preempt_queue_prio",
-                            "preempt_suspend",
-                            "preempt_checkpoint",
-                            "preempt_requeue",
-                            "preemptive_sched",
-                            "dont_preempt_starving",
-                            "node_group_key",
-                            "dont_preempt_starving",
-                            "fairshare_enforce_no_shares",
-                            "strict_ordering",
-                            "resource_unset_infinite",
-                            "provision_policy",
-                            "resv_confirm_ignore",
-                            "allow_aoe_calendar",
-                            "max_job_check",
-                            "preempt_attempts",
-                            "update_comments",
-                            "sort_by",
-                            "key",
-                            "preempt_starving",
-                            "preempt_fairshare",
-                            "assign_ssinodes",
-                            "cpus_per_ssinode",
-                            "mem_per_ssinode",
-                            "strict_fifo",
-                            "mem_per_ssinode",
-                            "strict_fifo"
-                            ]
-
-    fs_re = r'(?P<name>[\S]+)[\s]*:[\s]*Grp:[\s]*(?P<Grp>[-]*[0-9]*)' + \
-            r'[\s]*cgrp:[\s]*(?P<cgrp>[-]*[0-9]*)[\s]*' + \
-            r'Shares:[\s]*(?P<Shares>[-]*[0-9]*)[\s]*Usage:[\s]*' + \
-            r'(?P<Usage>[0-9]+)[\s]*Perc:[\s]*(?P<Perc>.*)%'
-    fs_tag = re.compile(fs_re)
-
-    def __init__(self, hostname=None, server=None, pbsconf_file=None,
-                 snapmap={}, snap=None, db_access=None, id='default',
-                 sched_priv=None):
-
-        self.sched_config_file = None
-        self.dflt_holidays_file = None
-        self.holidays_file = None
-        self.sched_config = {}
-        self._sched_config_comments = {}
-        self._config_order = []
-        self.dedicated_time_file = None
-        self.dedicated_time = None
-        self.dedicated_time_as_str = None
-        self.fairshare_tree = None
-        self.resource_group = None
-        self.holidays_obj = None
-        self.server = None
-        self.db_access = None
-        self.user = None
-
-        if server is not None:
-            self.server = server
-            if snap is None and self.server.snap is not None:
-                snap = self.server.snap
-            if (len(snapmap) == 0) and (len(self.server.snapmap) != 0):
-                snapmap = self.server.snapmap
-        else:
-            self.server = Server(hostname, pbsconf_file=pbsconf_file,
-                                 db_access=db_access, snap=snap,
-                                 snapmap=snapmap)
-
-        if hostname is None:
-            hostname = self.server.hostname
-
-        PBSService.__init__(self, hostname, pbsconf_file=pbsconf_file,
-                            snap=snap, snapmap=snapmap)
-        _m = ['scheduler ', self.shortname]
-        if pbsconf_file is not None:
-            _m += ['@', pbsconf_file]
-        _m += [': ']
-        self.logprefix = "".join(_m)
-        self.pi = PBSInitServices(hostname=self.hostname,
-                                  conf=self.pbs_conf_file)
-        self.pbs_conf = self.server.pbs_conf
-        self.sc_name = id
-
-        self.user = DAEMON_SERVICE_USER
-
-        self.dflt_sched_config_file = os.path.join(self.pbs_conf['PBS_EXEC'],
-                                                   'etc', 'pbs_sched_config')
-
-        self.dflt_holidays_file = os.path.join(self.pbs_conf['PBS_EXEC'],
-                                               'etc', 'pbs_holidays')
-
-        self.dflt_resource_group_file = os.path.join(self.pbs_conf['PBS_EXEC'],
-                                                     'etc',
-                                                     'pbs_resource_group')
-        self.dflt_dedicated_file = os.path.join(self.pbs_conf['PBS_EXEC'],
-                                                'etc',
-                                                'pbs_dedicated')
-        self.setup_sched_priv(sched_priv)
-        self.setup_sched_logs()
-
-        self.db_access = db_access
-
-        self.version = None
-
-    def __del__(self):
-        del self.__dict__
-
-    def setup_sched_priv(self, sched_priv=None):
-        """
-        Initialize Scheduler() member variables on initialization or if
-        sched_priv changes
-        """
-        if sched_priv is None:
-            if 'sched_priv' in self.attributes:
-                sched_priv = self.attributes['sched_priv']
-            else:
-                sched_priv = os.path.join(self.pbs_conf['PBS_HOME'],
-                                          'sched_priv')
-
-        self.du.chown(self.hostname, sched_priv, uid=self.user,
-                      recursive=True, sudo=True)
-
-        self.sched_config_file = os.path.join(sched_priv, 'sched_config')
-        self.resource_group_file = os.path.join(sched_priv, 'resource_group')
-        self.holidays_file = os.path.join(sched_priv, 'holidays')
-        self.set_dedicated_time_file(os.path.join(sched_priv,
-                                                  'dedicated_time'))
-
-        if not os.path.exists(sched_priv):
-            return
-
-        self.parse_sched_config()
-
-        self.fairshare_tree = self.query_fairshare()
-        rg = self.parse_resource_group(self.hostname, self.resource_group_file)
-        self.resource_group = rg
-
-        self.holidays_obj = Holidays()
-        self.holidays_parse_file(level=logging.DEBUG)
-
-    def setup_sched_logs(self):
-        if 'sched_log' in self.attributes:
-            sched_logs = self.attributes['sched_log']
-        else:
-            sched_logs = os.path.join(self.pbs_conf['PBS_HOME'],
-                                      'sched_logs')
-
-        self.du.chown(self.hostname, sched_logs, uid=self.user,
-                      recursive=True, sudo=True)
-
-    def initialise_service(self):
-        """
-        initialise the scheduler object
-        """
-        PBSService.initialise_service(self)
-        try:
-            attrs = self.server.status(SCHED, level=logging.DEBUG,
-                                       db_access=self.db_access,
-                                       id=self.sc_name)
-            if attrs is not None and len(attrs) > 0:
-                self.attributes = attrs[0]
-        except (PbsManagerError, PbsStatusError) as e:
-            self.logger.error('Error querying scheduler %s' % e.msg)
-
-    def isUp(self):
-        """
-        Check for PBS scheduler up
-        """
-        for _ in range(self.ptl_conf['max_attempts']):
-            rv = super(Scheduler, self)._isUp(self)
-            if rv:
-                break
-            time.sleep(1)
-        return rv
-
-    def signal(self, sig):
-        """
-        Send a signal to PBS scheduler
-        """
-        self.logger.info('scheduler ' + self.shortname + ': sent signal ' +
-                         sig)
-        return super(Scheduler, self)._signal(sig, inst=self)
-
-    def get_pid(self):
-        """
-        Get the PBS scheduler pid
-        """
-        return super(Scheduler, self)._get_pid(inst=self)
-
-    def all_instance_pids(self):
-        """
-        Get the all pids for the instance
-        """
-        return super(Scheduler, self)._all_instance_pids(inst=self)
-
-    def start(self, sched_home=None, args=None, launcher=None):
-        """
-        Start the scheduler
-        :param sched_home: Path to scheduler log and home directory
-        :type sched_home: str
-        :param args: Arguments required to start the scheduler
-        :type args: str
-        :param launcher: Optional utility to invoke the launch of the service
-        :type launcher: str or list
-        """
-        if self.attributes['id'] != 'default':
-            cmd = [os.path.join(self.pbs_conf['PBS_EXEC'],
-                                'sbin', 'pbs_sched')]
-            cmd += ['-I', self.attributes['id']]
-            cmd += ['-S', str(self.attributes['sched_port'])]
-            if sched_home is not None:
-                cmd += ['-d', sched_home]
-            try:
-                ret = self.du.run_cmd(self.hostname, cmd, sudo=True,
-                                      logerr=False, level=logging.INFOCLI)
-            except PbsInitServicesError as e:
-                raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            self.server.manager(MGR_CMD_LIST, SCHED)
-            return ret
-
-        if args is not None or launcher is not None:
-            return super(Scheduler, self)._start(inst=self, args=args,
-                                                 launcher=launcher)
-        else:
-            try:
-                rv = self.pi.start_sched()
-                pid = self._validate_pid(self)
-                if pid is None:
-                    raise PbsServiceError(rv=False, rc=-1,
-                                          msg="Could not find PID")
-            except PbsInitServicesError as e:
-                raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            return rv
-
-    def stop(self, sig=None):
-        """
-        Stop the PBS scheduler
-
-        :param sig: Signal to stop the PBS scheduler
-        :type sig: str
-        """
-        if sig is not None:
-            self.logger.info(self.logprefix + 'stopping Scheduler on host ' +
-                             self.hostname)
-            return super(Scheduler, self)._stop(sig, inst=self)
-        else:
-            try:
-                self.pi.stop_sched()
-            except PbsInitServicesError as e:
-                raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            return True
-
-    def restart(self):
-        """
-        Restart the PBS scheduler
-        """
-        if self.isUp():
-            if not self.stop():
-                return False
-        return self.start()
-
-    def log_match(self, msg=None, id=None, n=50, tail=True, allmatch=False,
-                  regexp=False, max_attempts=None, interval=None,
-                  starttime=None, endtime=None, level=logging.INFO,
-                  existence=True):
-        """
-        Match given ``msg`` in given ``n`` lines of Scheduler log
-
-        :param msg: log message to match, can be regex also when
-                    ``regexp`` is True
-        :type msg: str
-        :param id: The id of the object to trace. Only used for
-                   tracejob
-        :type id: str
-        :param n: 'ALL' or the number of lines to search through,
-                  defaults to 50
-        :type n: str or int
-        :param tail: If true (default), starts from the end of
-                     the file
-        :type tail: bool
-        :param allmatch: If True all matching lines out of then
-                         parsed are returned as a list. Defaults
-                         to False
-        :type allmatch: bool
-        :param regexp: If true msg is a Python regular expression.
-                       Defaults to False
-        :type regexp: bool
-        :param max_attempts: the number of attempts to make to find
-                             a matching entry
-        :type max_attempts: int
-        :param interval: the interval between attempts
-        :type interval: int
-        :param starttime: If set ignore matches that occur before
-                          specified time
-        :type starttime: float
-        :param endtime: If set ignore matches that occur after
-                        specified time
-        :type endtime: float
-        :param level: The logging level, defaults to INFO
-        :type level: int
-        :param existence: If True (default), check for existence of
-                        given msg, else check for non-existence of
-                        given msg.
-        :type existence: bool
-
-        :return: (x,y) where x is the matching line
-                 number and y the line itself. If allmatch is True,
-                 a list of tuples is returned.
-        :rtype: tuple
-        :raises PtlLogMatchError:
-                When ``existence`` is True and given
-                ``msg`` is not found in ``n`` line
-                Or
-                When ``existence`` is False and given
-                ``msg`` found in ``n`` line.
-
-        .. note:: The matching line number is relative to the record
-                  number, not the absolute line number in the file.
-        """
-        return self._log_match(self, msg, id, n, tail, allmatch, regexp,
-                               max_attempts, interval, starttime, endtime,
-                               level=level, existence=existence)
-
-    def run_scheduling_cycle(self):
-        """
-        Convenience method to start and finish a sched cycle
-        """
-        sched = self.attributes['id']
-        old_val = self.server.status(SCHED, 'scheduling', id=sched)[
-            0]['scheduling']
-
-        # Make sure that we aren't in a sched cycle already
-        self.server.manager(MGR_CMD_SET, SCHED, {
-                            'scheduling': 'False'}, id=sched)
-
-        # Kick a new cycle
-        tbefore = time.time()
-        self.server.manager(MGR_CMD_SET, SCHED, {
-                            'scheduling': 'True'}, id=sched)
-        self.log_match("Starting Scheduling",
-                       starttime=tbefore)
-
-        if old_val == 'False':
-            # This will also ensure that the sched cycle is over before
-            # returning
-            self.server.manager(MGR_CMD_SET, SCHED, {'scheduling': 'False'},
-                                id=sched)
-        else:
-            self.server.expect(SCHED, {'state': 'scheduling'}, op=NE,
-                               id=sched, interval=1, max_attempts=1200,
-                               trigger_sched_cycle=False)
-
-    def pbs_version(self):
-        """
-        Get the version of the scheduler instance
-        """
-        if self.version:
-            return self.version
-
-        version = self.log_match('pbs_version', tail=False)
-        if version:
-            version = version[1].strip().split('=')[1]
-        else:
-            version = "unknown"
-
-        self.version = LooseVersion(version)
-
-        return self.version
-
-    def parse_sched_config(self, schd_cnfg=None):
-        """
-        Parse a sceduling configuration file into a dictionary.
-        Special handling of identical keys ``(e.g., node_sort_key)``
-        is done by appending a delimiter, '%', between each value
-        of the key. When printed back to file, each delimited entry
-        gets written on a line of its own. For example, the python
-        dictionary entry:
-
-        ``{'node_sort_key':
-        ["ncpus HIGH unusued" prime", "node_priority HIH"
-        non-prime"]}``
-
-        will get written as:
-
-        ``node_sort_key: "ncpus HIGH unusued" prime``
-        ``node_sort_key: "node_priority HIGH"  non-prime``
-
-        Returns sched_config dictionary that gets reinitialized
-        every time this method is called.
-        """
-        # sched_config is initialized
-        if self.sched_config:
-            del(self.sched_config)
-            self.sched_config = {}
-            self._sched_config_comments = {}
-            self._config_order = []
-        if schd_cnfg is None:
-            if self.sched_config_file is not None:
-                schd_cnfg = self.sched_config_file
-            else:
-                self.logger.error('no scheduler configuration file to parse')
-                return False
-
-        try:
-            conf_opts = self.du.cat(self.hostname, schd_cnfg,
-                                    sudo=(not self.has_snap),
-                                    level=logging.DEBUG2)['out']
-        except:
-            self.logger.error('error parsing scheduler configuration')
-            return False
-
-        _comment = []
-        conf_re = re.compile(
-            r'[#]?[\s]*(?P<conf_id>[\w]+):[\s]*(?P<conf_val>.*)')
-        for line in conf_opts:
-            m = conf_re.match(line)
-            if m:
-                key = m.group('conf_id')
-                val = m.group('conf_val')
-                # line is a comment, it could be a commented out scheduling
-                # option, or the description of an option. It could also be
-                # that part of the description is an example setting of the
-                # option.
-                # We must keep track of commented out options in order to
-                # rewrite the configuration in the same order as it was defined
-                if line.startswith('#'):
-                    if key in self.sched_config_options:
-                        _comment += [line]
-                        if key in self._sched_config_comments:
-                            self._sched_config_comments[key] += _comment
-                            _comment = []
-                        else:
-                            self._sched_config_comments[key] = _comment
-                            _comment = []
-                        if key not in self._config_order:
-                            self._config_order.append(key)
-                    else:
-                        _comment += [line]
-                    continue
-
-                if key not in self._sched_config_comments:
-                    self._sched_config_comments[key] = _comment
-                else:
-                    self._sched_config_comments[key] += _comment
-                if key not in self._config_order:
-                    self._config_order.append(key)
-
-                _comment = []
-                if key in self.sched_config:
-                    if isinstance(self.sched_config[key], list):
-                        if isinstance(val, list):
-                            self.sched_config[key].extend(val)
-                        else:
-                            self.sched_config[key].append(val)
-                    else:
-                        if isinstance(val, list):
-                            self.sched_config[key] = [self.sched_config[key]]
-                            self.sched_config[key].extend(val)
-                        else:
-                            self.sched_config[key] = [self.sched_config[key],
-                                                      val]
-                else:
-                    self.sched_config[key] = val
-            else:
-                _comment += [line]
-        self._sched_config_comments['PTL_SCHED_CONFIG_TAIL'] = _comment
-        return True
-
-    def check_defaults(self, config):
-        """
-        Check the values in argument config against default values
-        """
-
-        if len(config.keys()) == 0:
-            return
-        for k, v in self.sched_dflt_config.items():
-            if k in config:
-                s1 = v
-                s1 = s1.replace(" ", "")
-                s1 = s1.replace("\t", "").strip()
-                s2 = config[k]
-                s2 = s2.replace(" ", "")
-                s2 = s2.replace("\t", "").strip()
-
-                if s1 != s2:
-                    self.logger.debug(k + ' non-default: ' + v +
-                                      ' != ' + config[k])
-
-    def apply_config(self, config=None, validate=True, path=None):
-        """
-        Apply the configuration specified by config
-
-        :param config: Configurations to set. Default: self.
-                       sched_config
-        :param validate: If True (the default) validate that
-                         settings did not yield an error.
-                         Validation is done by parsing the
-                         scheduler log which, in some cases may
-                         be slow and therefore undesirable.
-        :type validate: bool
-        :param path: Optional path to file to which configuration
-                     is written. If None, the configuration is
-                     written to PBS_HOME/sched_priv/sched_config
-        :type path: str
-        :returns: True on success and False otherwise. Success
-                  means that upon applying the new configuration
-                  the scheduler did not emit an
-                  "Error reading line" in its log file.
-        """
-
-        if config is None:
-            config = self.sched_config
-
-        if len(config) == 0:
-            return True
-
-        reconfig_time = time.time()
-        try:
-            fn = self.du.create_temp_file()
-            with open(fn, "w", encoding="utf-8") as fd:
-                for k in self._config_order:
-                    if k in config:
-                        if k in self._sched_config_comments:
-                            fd.write("\n".join(self._sched_config_comments[k]))
-                            fd.write("\n")
-                        v = config[k]
-                        if isinstance(v, list):
-                            for val in v:
-                                fd.write(k + ": " + str(val) + "\n")
-                        else:
-                            fd.write(k + ": " + str(v) + "\n")
-                    elif k in self._sched_config_comments:
-                        fd.write("\n".join(self._sched_config_comments[k]))
-                        fd.write("\n")
-                for k, v in self.sched_config.items():
-                    if k not in self._config_order:
-                        fd.write(k + ": " + str(v).strip() + "\n")
-
-                if 'PTL_SCHED_CONFIG_TAIL' in self._sched_config_comments:
-                    fd.write("\n".join(
-                        self._sched_config_comments['PTL_SCHED_CONFIG_TAIL']))
-                    fd.write("\n")
-
-            if path is None:
-                if 'sched_priv' in self.attributes:
-                    sched_priv = self.attributes['sched_priv']
-                else:
-                    sched_priv = os.path.join(self.pbs_conf['PBS_HOME'],
-                                              "sched_priv")
-                sp = os.path.join(sched_priv, "sched_config")
-            else:
-                sp = path
-            self.du.run_copy(self.hostname, src=fn, dest=sp,
-                             preserve_permission=False,
-                             sudo=True, uid=self.user)
-            os.remove(fn)
-
-            self.logger.debug(self.logprefix + "updated configuration")
-        except:
-            m = self.logprefix + 'error in apply_config '
-            self.logger.error(m + str(traceback.print_exc()))
-            raise PbsSchedConfigError(rc=1, rv=False, msg=m)
-
-        if validate:
-            self.get_pid()
-            self.signal('-HUP')
-            try:
-                self.log_match("Sched;reconfigure;Scheduler is reconfiguring",
-                               starttime=reconfig_time)
-                self.log_match("Error reading line", max_attempts=2,
-                               starttime=reconfig_time, existence=False)
-            except PtlLogMatchError as log_error:
-                self.logger.error(log_error.msg)
-                _msg = 'Error in validating sched_config changes'
-                raise PbsSchedConfigError(rc=1, rv=False,
-                                          msg=_msg)
-        return True
-
-    def set_sched_config(self, confs={}, apply=True, validate=True):
-        """
-        set a ``sched_config`` property
-
-        :param confs: dictionary of key value sched_config entries
-        :type confs: Dictionary
-        :param apply: if True (the default), apply configuration.
-        :type apply: bool
-        :param validate: if True (the default), validate the
-                         configuration settings.
-        :type validate: bool
-        """
-        self.parse_sched_config()
-        self.logger.info(self.logprefix + "config " + str(confs))
-        self.sched_config = {**self.sched_config, **confs}
-        if apply:
-            try:
-                self.apply_config(validate=validate)
-            except PbsSchedConfigError as sched_error:
-                _msg = sched_error.msg
-                self.logger.error(_msg)
-                for k in confs:
-                    del self.sched_config[k]
-                self.apply_config(validate=validate)
-                raise PbsSchedConfigError(rc=1, rv=False, msg=_msg)
-        return True
-
-    def add_server_dyn_res(self, custom_resource, script_body=None,
-                           res_file=None, apply=True, validate=True,
-                           dirname=None, host=None, perm=0o700,
-                           prefix='PtlPbsSvrDynRes', suffix='.scr'):
-        """
-        Add a root owned server dynamic resource script or file to the
-        scheduler configuration.
-
-        :param custom_resource: The name of the custom resource to
-                                define
-        :type custom_resource: str
-        :param script_body: The body of the server dynamic resource
-        :param res_file: Alternatively to passing the script body, use
-                     the file instead
-        :type res_file: str or None
-        :param apply: if True (the default), apply configuration.
-        :type apply: bool
-        :param validate: if True (the default), validate the
-                         configuration settings.
-        :type validate: bool
-        :param dirname: the file will be created in this directory
-        :type dirname: str or None
-        :param host: the hostname on which dyn res script is created
-        :type host: str or None
-        :param perm: perm to use while creating scripts
-                     (must be octal like 0o777)
-        :param prefix: the file name will begin with this prefix
-        :type prefix: str
-        :param suffix: the file name will end with this suffix
-        :type suffix: str
-        :return Absolute path of the dynamic resource script
-        """
-        if res_file is not None:
-            with open(res_file) as f:
-                script_body = f.readlines()
-                self.du.chmod(hostname=host, path=res_file, mode=perm,
-                              sudo=True)
-        else:
-            if dirname is None:
-                dirname = self.pbs_conf['PBS_HOME']
-            tmp_file = self.du.create_temp_file(prefix=prefix, suffix=suffix,
-                                                body=script_body,
-                                                hostname=host)
-            res_file = os.path.join(dirname, tmp_file.split(os.path.sep)[-1])
-            self.du.run_copy(host, src=tmp_file, dest=res_file, sudo=True,
-                             preserve_permission=False)
-
-            user = self.user
-            group = pwd.getpwnam(str(user)).pw_gid
-
-            self.du.chown(hostname=host, path=res_file, uid=user, gid=group,
-                          sudo=True)
-            self.du.chmod(hostname=host, path=res_file, mode=perm, sudo=True)
-            if host is None:
-                self.dyn_created_files.append(res_file)
-
-        self.logger.info(self.logprefix + "adding server dyn res " + res_file)
-        self.logger.info("-" * 30)
-        self.logger.info(script_body)
-        self.logger.info("-" * 30)
-
-        a = {'server_dyn_res': '"' + custom_resource + ' !' + res_file + '"'}
-        self.set_sched_config(a, apply=apply, validate=validate)
-        return res_file
-
-    def unset_sched_config(self, name, apply=True):
-        """
-        Delete a ``sched_config`` entry
-
-        :param name: the entry to delete from sched_config
-        :type name: str
-        :param apply: if True, apply configuration. Defaults to True
-        :type apply: bool
-        """
-        self.parse_sched_config()
-        if name not in self.sched_config:
-            return True
-        self.logger.info(self.logprefix + "unsetting config " + name)
-        del self.sched_config[name]
-
-        if apply:
-            return self.apply_config()
-
-    def set_dedicated_time_file(self, filename):
-        """
-        Set the path to a dedicated time
-        """
-        self.logger.info(self.logprefix + " setting dedicated time file to " +
-                         str(filename))
-        self.dedicated_time_file = filename
-
-    def revert_to_defaults(self):
-        """
-        Revert scheduler configuration to defaults.
-
-        :returns: True on success, False otherwise
-        """
-        self.logger.info(self.logprefix +
-                         "reverting configuration to defaults")
-
-        ignore_attrs = ['id', 'pbs_version', 'sched_host',
-                        'state', 'sched_port']
-        unsetattrs = []
-        for k in self.attributes.keys():
-            if k not in ignore_attrs:
-                unsetattrs.append(k)
-        if len(unsetattrs) > 0:
-            self.server.manager(MGR_CMD_UNSET, SCHED, unsetattrs)
-        self.clear_dedicated_time(hup=False)
-        if self.du.cmp(self.hostname, self.dflt_resource_group_file,
-                       self.resource_group_file, sudo=True) != 0:
-            self.du.run_copy(self.hostname, src=self.dflt_resource_group_file,
-                             dest=self.resource_group_file,
-                             preserve_permission=False,
-                             sudo=True, uid=self.user)
-        rc = self.holidays_revert_to_default()
-        if self.du.cmp(self.hostname, self.dflt_sched_config_file,
-                       self.sched_config_file, sudo=True) != 0:
-            self.du.run_copy(self.hostname, src=self.dflt_sched_config_file,
-                             dest=self.sched_config_file,
-                             preserve_permission=False,
-                             sudo=True, uid=self.user)
-        if self.du.cmp(self.hostname, self.dflt_dedicated_file,
-                       self.dedicated_time_file, sudo=True):
-            self.du.run_copy(self.hostname, src=self.dflt_dedicated_file,
-                             dest=self.dedicated_time_file,
-                             preserve_permission=False, sudo=True,
-                             uid=self.user)
-
-        self.signal('-HUP')
-        # Revert fairshare usage
-        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs'), '-e']
-        if self.sc_name is not 'default':
-            cmd += ['-I', self.sc_name]
-        self.du.run_cmd(cmd=cmd, runas=self.user)
-        self.parse_sched_config()
-        if self.platform == 'cray' or self.platform == 'craysim':
-            self.add_resource('vntype')
-            self.add_resource('hbmem')
-        self.fairshare_tree = None
-        self.resource_group = None
-        return self.isUp()
-
-    def create_scheduler(self, sched_home=None):
-        """
-        Start scheduler with creating required directories for scheduler
-        :param sched_home: path of scheduler home and log directory
-        :type sched_home: str
-        """
-        if sched_home is None:
-            sched_home = self.server.pbs_conf['PBS_HOME']
-        sched_priv_dir = os.path.join(sched_home,
-                                      self.attributes['sched_priv'])
-        sched_logs_dir = os.path.join(sched_home,
-                                      self.attributes['sched_log'])
-        if not os.path.exists(sched_priv_dir):
-            self.du.mkdir(path=sched_priv_dir, sudo=True)
-            if self.user.name != 'root':
-                self.du.chown(hostname=self.hostname, path=sched_priv_dir,
-                              sudo=True, uid=self.user)
-            self.du.run_copy(self.hostname, src=self.dflt_resource_group_file,
-                             dest=self.resource_group_file, mode=0o644,
-                             sudo=True, uid=self.user)
-            self.du.run_copy(self.hostname, src=self.dflt_holidays_file,
-                             dest=self.holidays_file, mode=0o644,
-                             sudo=True, uid=self.user)
-            self.du.run_copy(self.hostname, src=self.dflt_sched_config_file,
-                             dest=self.sched_config_file, mode=0o644,
-                             sudo=True, uid=self.user)
-            self.du.run_copy(self.hostname, src=self.dflt_dedicated_file,
-                             dest=self.dedicated_time_file, mode=0o644,
-                             sudo=True, uid=self.user)
-        if not os.path.exists(sched_logs_dir):
-            self.du.mkdir(path=sched_logs_dir, sudo=True)
-            if self.user.name != 'root':
-                self.du.chown(hostname=self.hostname, path=sched_logs_dir,
-                              sudo=True, uid=self.user)
-
-        self.setup_sched_priv(sched_priv=sched_priv_dir)
-
-    def save_configuration(self, outfile=None, mode='w'):
-        """
-        Save scheduler configuration
-
-        :param outfile: Optional Path to a file to which configuration
-                        is saved, when not provided, data is saved in
-                        class variable saved_config
-        :type outfile: str
-        :param mode: mode to use to access outfile. Defaults to
-                     append, 'w'.
-        :type mode: str
-        :returns: True on success and False otherwise
-        """
-        conf = {}
-        if 'sched_priv' in self.attributes:
-            sched_priv = self.attributes['sched_priv']
-        else:
-            sched_priv = os.path.join(
-                self.pbs_conf['PBS_HOME'], 'sched_priv')
-        sc = os.path.join(sched_priv, 'sched_config')
-        self._save_config_file(conf, sc)
-        rg = os.path.join(sched_priv, 'resource_group')
-        self._save_config_file(conf, rg)
-        dt = os.path.join(sched_priv, 'dedicated_time')
-        self._save_config_file(conf, dt)
-        hd = os.path.join(sched_priv, 'holidays')
-        self._save_config_file(conf, hd)
-
-        self.server.saved_config[MGR_OBJ_SCHED] = conf
-        if outfile is not None:
-            try:
-                with open(outfile, mode) as f:
-                    json.dump(self.server.saved_config, f)
-                    self.server.saved_config[MGR_OBJ_SCHED].clear()
-            except:
-                self.logger.error('error saving configuration ' + outfile)
-                return False
-
-        return True
-
-    def load_configuration(self, infile):
-        """
-        load scheduler configuration from saved file infile
-        """
-        rv = self._load_configuration(infile, MGR_OBJ_SCHED)
-        self.signal('-HUP')
-        return rv
-
-    def get_resources(self, exclude=[]):
-        """
-        returns a list of allocatable resources.
-
-        :param exclude: if set, excludes the named resources, if
-                        they exist, from the resulting list
-        :type exclude: List
-        """
-        if 'resources' not in self.sched_config:
-            return None
-        resources = self.sched_config['resources']
-        resources = resources.replace('"', '')
-        resources = resources.replace(' ', '')
-        res = resources.split(',')
-        if len(exclude) > 0:
-            for e in exclude:
-                if e in res:
-                    res.remove(e)
-        return res
-
-    def add_resource(self, name, apply=True):
-        """
-        Add a resource to ``sched_config``.
-
-        :param name: the resource name to add
-        :type name: str
-        :param apply: if True, apply configuration. Defaults to True
-        :type apply: bool
-        :returns: True on success and False otherwise.
-                  Return True if the resource is already defined.
-        """
-        # if the sched_config has not been read in yet, parse it
-        if not self.sched_config:
-            self.parse_sched_config()
-
-        if 'resources' in self.sched_config:
-            resources = self.sched_config['resources']
-            resources = resources.replace('"', '')
-            splitres = [r.strip() for r in resources.split(",")]
-            if name in splitres:
-                return True
-            resources = '"' + resources + ', ' + name + '"'
-        else:
-            resources = '"' + name + '"'
-
-        return self.set_sched_config({'resources': resources}, apply=apply)
-
-    def remove_resource(self, name, apply=True):
-        """
-        Remove a resource to ``sched_config``.
-
-        :param name: the resource name to remove
-        :type name: str
-        :param apply: if True, apply configuration. Defaults to True
-        :type apply: bool
-        :returns: True on success and False otherwise
-        """
-        # if the sched_config has not been read in yet, parse it
-        if not self.sched_config:
-            self.parse_sched_config()
-
-        if 'resources' in self.sched_config:
-            resources = self.sched_config['resources']
-            resources = resources.replace('"', '')
-            splitres = [r.strip() for r in resources.split(",")]
-            if name not in splitres:
-                return True
-
-            newres = []
-            for r in splitres:
-                if r != name:
-                    newres.append(r)
-
-            resources = '"' + ",".join(newres) + '"'
-            return self.set_sched_config({'resources': resources}, apply=apply)
-
-    def holidays_revert_to_default(self, level=logging.INFO):
-        """
-        Revert holidays file to default
-        """
-        self.logger.log(level, self.logprefix +
-                        "reverting holidays file to default")
-
-        rc = None
-        # Copy over the holidays file from PBS_EXEC if it exists
-        if self.du.cmp(self.hostname, self.dflt_holidays_file,
-                       self.holidays_file, sudo=True) != 0:
-            ret = self.du.run_copy(self.hostname, src=self.dflt_holidays_file,
-                                   dest=self.holidays_file,
-                                   preserve_permission=False, sudo=True,
-                                   logerr=True)
-            rc = ret['rc']
-            # Update the internal data structures for the updated file
-            self.holidays_parse_file(level=level)
-        else:
-            rc = 1
-        return rc
-
-    def holidays_parse_file(self, path=None, obj=None, level=logging.INFO):
-        """
-        Parse the existing holidays file
-
-        :param path: optional path to the holidays file to parse
-        :type path: str or None
-        :param obj: optional holidays object to be used instead
-                    of internal
-        :returns: The content of holidays file as a list of lines
-        """
-        self.logger.log(level, self.logprefix + "Parsing holidays file")
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_map = obj._days_map
-        days_set = obj.days_set
-        if path is None:
-            path = self.holidays_file
-        lines = self.du.cat(self.hostname, path, sudo=True)['out']
-
-        content = []    # valid content to return
-
-        self.holidays_delete_entry(
-            'a', apply=False, obj=obj, level=logging.DEBUG)
-
-        for line in lines:
-            entry = str(line).split()
-            if len(entry) == 0:
-                continue
-            tag = entry[0].lower()
-            if tag == "year":   # initialize year
-                content.append("\t".join(entry))
-                obj.year['valid'] = True
-                if len(entry) > 1:
-                    obj.year['value'] = entry[1]
-            elif tag in days_map.keys():   # initialize a day
-                content.append("\t".join(entry))
-                day = days_map[tag]
-                day['valid'] = True
-                days_set.append(day)
-                day['position'] = len(days_set) - 1
-                if len(entry) > 1:
-                    day['p'] = entry[1]
-                if len(entry) > 2:
-                    day['np'] = entry[2]
-            elif tag.isdigit():   # initialize a holiday
-                content.append("\t".join(entry))
-                obj.holidays.append(tag)
-            else:
-                pass
-        return content
-
-    def holidays_set_day(self, day_id, prime="", nonprime="", apply=True,
-                         obj=None, level=logging.INFO):
-        """
-        Set prime time values for a day
-
-        :param day_id: the day to be set (string)
-        :type day_id: str
-        :param prime: the prime time value
-        :param nonprime: the non-prime time value
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-        :returns: The position ``(0-7)`` of the set day
-        """
-        self.logger.log(level, self.logprefix +
-                        "setting holidays file entry for %s",
-                        day_id)
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        day = obj._days_map[str(day_id).lower()]
-        days_set = obj.days_set
-
-        if day['valid'] is None:    # Fresh entry
-            days_set.append(day)
-            day['position'] = len(days_set) - 1
-        elif day['valid'] is False:  # Previously invalidated entry
-            days_set.insert(day['position'], day)
-        else:
-            pass
-
-        day['valid'] = True
-        day['p'] = str(prime)
-        day['np'] = str(nonprime)
-
-        self.logger.debug("holidays_set_day(): changed day struct: " +
-                          str(day))
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-        return day['position']
-
-    def holidays_get_day(self, day_id, obj=None, level=logging.INFO):
-        """
-        :param obj: optional holidays object to be used instead
-                    of internal
-        :param day_id: either a day's name or "all"
-        :type day_id: str
-        :returns: A copy of info about a day/all set days
-        """
-        self.logger.log(level, self.logprefix +
-                        "getting holidays file entry for " +
-                        day_id)
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_set = obj.days_set
-        days_map = obj._days_map
-
-        if day_id == "all":
-            return days_set[:]
-        else:
-            return days_map[day_id].copy()
-
-    def holidays_reposition_day(self, day_id, new_pos, apply=True, obj=None,
-                                level=logging.INFO):
-        """
-        Change position of a day ``(0-7)`` as it appears in the
-        holidays file
-
-        :param day_id: name of the day
-        :type day_id: str
-        :param new_pos: new position
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-        :returns: The new position of the day
-        """
-        self.logger.log(level, self.logprefix +
-                        "repositioning holidays file entry for " +
-                        day_id + " to position " + str(new_pos))
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_map = obj._days_map
-        days_set = obj.days_set
-        day = days_map[str(day_id).lower()]
-
-        if new_pos == day['position']:
-            return
-
-        # We also want to update order of invalid days, so add them to
-        # days_set temporarily
-        invalid_days = []
-        for name in days_map:
-            if days_map[name]['valid'] is False:
-                invalid_days.append(days_map[name])
-        days_set += invalid_days
-
-        # Sort the old list
-        days_set.sort(key=itemgetter('position'))
-
-        # Change position of 'day_id'
-        day['position'] = new_pos
-        days_set.remove(day)
-        days_set.insert(new_pos, day)
-
-        # Update the 'position' field
-        for i in range(0, len(days_set)):
-            days_set[i]['position'] = i
-
-        # Remove invalid days from days_set
-        len_days_set = len(days_set)
-        days_set = [days_set[i] for i in range(0, len_days_set)
-                    if days_set[i] not in invalid_days]
-
-        self.logger.debug("holidays_reposition_day(): List of days after " +
-                          " re-positioning " + str(day_id) + " is:\n" +
-                          str(days_set))
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-        return new_pos
-
-    def holidays_unset_day(self, day_id, apply=True, obj=None,
-                           level=logging.INFO):
-        """
-        Unset prime time values for a day
-
-        :param day_id: day to unset (string)
-        :type day_id: str
-        :param apply: to reflect the changes to file
-        :param obj: optional holidays object to be used instead
-                    of internal
-
-        .. note:: we do not unset the 'valid' field here so the entry
-                  will still be displayed but without any values
-        """
-        self.logger.log(level, self.logprefix +
-                        "unsetting holidays file entry for " + day_id)
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        day = obj._days_map[str(day_id).lower()]
-        day['p'] = ""
-        day['np'] = ""
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-    def holidays_invalidate_day(self, day_id, apply=True, obj=None,
-                                level=logging.INFO):
-        """
-        Remove a day's entry from the holidays file
-
-        :param day_id: the day to remove (string)
-        :type day_id: str
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-        """
-        self.logger.log(level, self.logprefix +
-                        "invalidating holidays file entry for " +
-                        day_id)
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_map = obj._days_map
-        days_set = obj.days_set
-
-        day = days_map[str(day_id).lower()]
-        day['valid'] = False
-        days_set.remove(day)
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-    def holidays_validate_day(self, day_id, apply=True, obj=None,
-                              level=logging.INFO):
-        """
-        Make valid a previously set day's entry
-
-        :param day_id: the day to validate (string)
-        :type day_id: str
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-
-        .. note:: The day will retain its previous position in
-                  the file
-        """
-        self.logger.log(level, self.logprefix +
-                        "validating holidays file entry for " +
-                        day_id)
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_map = obj._days_map
-        days_set = obj.days_set
-
-        day = days_map[str(day_id).lower()]
-        if day in days_set:  # do not insert a pre-existing day
-            self.logger.debug("holidays_validate_day(): " +
-                              day_id + " is already valid!")
-            return
-
-        day['valid'] = True
-        days_set.insert(day['position'], day)
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-    def holidays_delete_entry(self, entry_type, idx=None, apply=True,
-                              obj=None, level=logging.INFO):
-        """
-        Delete ``one/all`` entries from holidays file
-
-        :param entry_type: 'y':year, 'd':day, 'h':holiday or 'a': all
-        :type entry_type: str
-        :param idx: either a day of week (monday, tuesday etc.)
-                    or Julian date  of a holiday
-        :type idx: str or None
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead of
-                    internal
-        :returns: False if entry_type is invalid, otherwise True
-
-        .. note:: The day cannot be validated and will lose it's
-                  position in the file
-        """
-        self.logger.log(level, self.logprefix +
-                        "Deleting entries from holidays file")
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_map = obj._days_map
-        days_set = obj.days_set
-        holiday_list = obj.holidays
-        year = obj.year
-
-        if entry_type not in ['a', 'y', 'd', 'h']:
-            return False
-
-        if entry_type == 'y' or entry_type == 'a':
-            self.logger.debug(self.logprefix +
-                              "deleting year entry from holidays file")
-            # Delete year entry
-            year['value'] = None
-            year['valid'] = False
-
-        if entry_type == 'd' or entry_type == 'a':
-            # Delete one/all day entries
-            num_days_to_delete = 1
-            if entry_type == 'a':
-                self.logger.debug(self.logprefix +
-                                  "deleting all days from holidays file")
-                num_days_to_delete = len(days_set)
-            for i in range(0, num_days_to_delete):
-                if (entry_type == 'd'):
-                    self.logger.debug(self.logprefix +
-                                      "deleting " + str(idx) +
-                                      " entry from holidays file")
-                    day = days_map[str(idx).lower()]
-                else:
-                    day = days_set[0]
-
-                day['p'] = None
-                day['np'] = None
-                day['valid'] = None
-                day['position'] = None
-                days_set.remove(day)
-                if entry_type == 'd':
-                    # Correct 'position' field of every day
-                    for i in range(0, len(days_set)):
-                        days_set[i]['position'] = i
-
-        if entry_type == 'h' or entry_type == 'a':
-            # Delete one/all calendar holiday entries
-            if entry_type == 'a':
-                self.logger.debug(self.logprefix +
-                                  "deleting all holidays from holidays file")
-                del holiday_list[:]
-            else:
-                self.logger.debug(self.logprefix +
-                                  "deleting holiday on " + str(idx) +
-                                  " from holidays file")
-                holiday_list.remove(str(idx))
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-        return True
-
-    def holidays_set_year(self, new_year="", apply=True, obj=None,
-                          level=logging.INFO):
-        """
-        Set the year value
-
-        :param newyear: year value to set
-        :type newyear: str
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-        """
-        self.logger.log(level, self.logprefix +
-                        "setting holidays file year entry to " +
-                        str(new_year))
-        if obj is None:
-            obj = self.holidays_obj
-
-        year = obj.year
-
-        year['value'] = str(new_year)
-        year['valid'] = True
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-    def holidays_unset_year(self, apply=True, obj=None, level=logging.INFO):
-        """
-        Unset the year value
-
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-        """
-        self.logger.log(level, self.logprefix +
-                        "unsetting holidays file year entry")
-        if obj is None:
-            obj = self.holidays_obj
-
-        obj.year['value'] = ""
-
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-    def holidays_get_year(self, obj=None, level=logging.INFO):
-        """
-        :param obj: optional holidays object to be used instead
-                    of internal
-        :returns: The year entry of holidays file
-        """
-        self.logger.log(level, self.logprefix +
-                        "getting holidays file year entry")
-        if obj is None:
-            obj = self.holidays_obj
-
-        year = obj.year
-        return year.copy()
-
-    def holidays_add_holiday(self, date=None, apply=True, obj=None,
-                             level=logging.INFO):
-        """
-        Add a calendar holiday to the holidays file
-
-        :param date: Date value for the holiday
-        :param apply: to reflect the changes to file
-        :type apply: bool
-        :param obj: optional holidays object to be used instead
-                    of internal
-        """
-        self.logger.log(level, self.logprefix +
-                        "adding holiday " + str(date) +
-                        " to holidays file")
-        if obj is None:
-            obj = self.holidays_obj
-
-        holiday_list = obj.holidays
-
-        if date is not None:
-            holiday_list.append(str(date))
-        else:
-            pass
-        self.logger.debug("holidays list after adding one: " +
-                          str(holiday_list))
-        if apply:
-            self.holidays_write_file(obj=obj, level=logging.DEBUG)
-
-    def holidays_get_holidays(self, obj=None, level=logging.INFO):
-        """
-        :param obj: optional holidays object to be used instead
-                    of internal
-        :returns: The list of holidays in holidays file
-        """
-        self.logger.log(level, self.logprefix +
-                        "retrieving list of holidays")
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        holiday_list = obj.holidays
-        return holiday_list[:]
-
-    def _holidays_process_content(self, content, obj=None):
-        """
-        Process a user provided list of holidays file content
-
-        :param obj: optional holidays object to be used instead
-                    of internal
-        """
-        self.logger.debug("_holidays_process_content(): " +
-                          "Processing user provided holidays content:\n" +
-                          str(content))
-        if obj is None:
-            obj = self.holidays_obj
-
-        days_map = obj._days_map
-        year = obj.year
-        holiday_list = obj.holidays
-        days_set = obj.days_set
-
-        self.holidays_delete_entry(
-            'a', apply=False, obj=obj, level=logging.DEBUG)
-
-        if content is None:
-            self.logger.debug("Holidays file was wiped out")
-            return
-
-        for line in content:
-            entry = line.split()
-            if len(entry) == 0:
-                continue
-            tag = entry[0].lower()
-            if tag == "year":   # initialize self.year
-                year['valid'] = True
-                if len(entry) > 1:
-                    year['value'] = entry[1]
-            elif tag in days_map.keys():   # initialize self.<day>
-                day = days_map[tag]
-                day['valid'] = True
-                days_set.append(day)
-                day['position'] = len(days_set) - 1
-                if len(entry) > 1:
-                    day['p'] = entry[1]
-                if len(entry) > 2:
-                    day['np'] = entry[2]
-            elif tag.isdigit():   # initialize self.holiday
-                holiday_list.append(tag)
-            else:
-                pass
-
-    def holidays_write_file(self, content=None, out_path=None,
-                            hup=True, obj=None, level=logging.INFO):
-        """
-        Write to the holidays file with content ``given/generated``
-
-        :param hup: SIGHUP the scheduler after writing the holidays
-                    file
-        :type hup: bool
-        :param obj: optional holidays object to be used instead of
-                    internal
-        """
-        self.logger.log(level, self.logprefix +
-                        "Writing to the holidays file")
-
-        if obj is None:
-            obj = self.holidays_obj
-
-        if out_path is None:
-            out_path = self.holidays_file
-
-        if content is not None:
-            self._holidays_process_content(content, obj)
-        else:
-            content = str(obj)
-
-        self.logger.debug("content being written:\n" + str(content))
-
-        fn = self.du.create_temp_file(self.hostname, body=content)
-        ret = self.du.run_copy(self.hostname, src=fn, dest=out_path,
-                               preserve_permission=False, sudo=True)
-        self.du.rm(self.hostname, fn)
-
-        if ret['rc'] != 0:
-            raise PbsSchedConfigError(rc=ret['rc'], rv=ret['out'],
-                                      msg=('error applying holidays file' +
-                                           ret['err']))
-        if hup:
-            rv = self.signal('-HUP')
-            if not rv:
-                raise PbsSchedConfigError(rc=1, rv=False,
-                                          msg='error applying holidays file')
-        return True
-
-    def parse_dedicated_time(self, file=None):
-        """
-        Parse the dedicated_time file and populate dedicated times
-        as both a string dedicated_time array of dictionaries defined
-        as ``[{'from': datetime, 'to': datetime}, ...]`` as well as a
-        dedicated_time_as_str array with a string representation of
-        each entry
-
-        :param file: optional file to parse. Defaults to the one under
-                     ``PBS_HOME/sched_priv``
-        :type file: str or None
-
-        :returns: The dedicated_time list of dictionaries or None on
-                  error.Return an empty array if dedicated time file
-                  is empty.
-        """
-        self.dedicated_time_as_str = []
-        self.dedicated_time = []
-
-        if file:
-            dt_file = file
-        elif self.dedicated_time_file:
-            dt_file = self.dedicated_time_file
-        else:
-            dt_file = os.path.join(self.pbs_conf['PBS_HOME'], 'sched_priv',
-                                   'dedicated_time')
-        try:
-            lines = self.du.cat(self.hostname, dt_file, sudo=True)['out']
-            if lines is None:
-                return []
-
-            for line in lines:
-                if not line.startswith('#') and len(line) > 0:
-                    self.dedicated_time_as_str.append(line)
-                    (dtime_from, dtime_to) = self.utils.convert_dedtime(line)
-                    self.dedicated_time.append({'from': dtime_from,
-                                                'to': dtime_to})
-        except:
-            self.logger.error('error in parse_dedicated_time')
-            return None
-
-        return self.dedicated_time
-
-    def clear_dedicated_time(self, hup=True):
-        """
-        Clear the dedicated time file
-        """
-        self.parse_dedicated_time()
-        if ((len(self.dedicated_time) == 0) and
-                (len(self.dedicated_time_as_str) == 0)):
-            return True
-        if self.dedicated_time:
-            for d in self.dedicated_time:
-                del d
-        if self.dedicated_time_as_str:
-            for d in self.dedicated_time_as_str:
-                del d
-        self.dedicated_time = []
-        self.dedicated_time_as_str = []
-        dt = "# FORMAT: MM/DD/YYYY HH:MM MM/DD/YYYY HH:MM"
-        return self.add_dedicated_time(dt, hup=hup)
-
-    def add_dedicated_time(self, as_str=None, start=None, end=None, hup=True):
-        """
-        Append a dedicated time entry. The function can be called
-        in one of two ways, either by passing in start and end as
-        time values, or by passing as_str, a string that gets
-        appended to the dedicated time entries and formatted as
-        follows, note that no check on validity of the format will
-        be made the function uses strftime to parse the datetime
-        and will fail if the strftime can not convert the string.
-        ``MM/DD/YYYY HH:MM MM/DD/YYYY HH:MM``
-
-        :returns: True on success and False otherwise
-        """
-        if self.dedicated_time is None:
-            self.parse_dedicated_time()
-
-        if start is not None and end is not None:
-            dtime_from = time.strftime("%m/%d/%Y %H:%M", time.localtime(start))
-            dtime_to = time.strftime("%m/%d/%Y %H:%M", time.localtime(end))
-            dedtime = dtime_from + " " + dtime_to
-        elif as_str is not None:
-            (dtime_from, dtime_to) = self.utils.convert_dedtime(as_str)
-            dedtime = as_str
-        else:
-            self.logger.warning("no dedicated from/to specified")
-            return True
-
-        for d in self.dedicated_time_as_str:
-            if dedtime == d:
-                if dtime_from is None or dtime_to is None:
-                    self.logger.info(self.logprefix +
-                                     "dedicated time already defined")
-                else:
-                    self.logger.info(self.logprefix +
-                                     "dedicated time from " + dtime_from +
-                                     " to " + dtime_to + " already defined")
-                return True
-
-        if dtime_from is not None and dtime_to is not None:
-            self.logger.info(self.logprefix +
-                             "adding dedicated time " + dedtime)
-
-        self.dedicated_time_as_str.append(dedtime)
-        if dtime_from is not None and dtime_to is not None:
-            self.dedicated_time.append({'from': dtime_from, 'to': dtime_to})
-        try:
-            fn = self.du.create_temp_file()
-            with open(fn, "w") as fd:
-                for l in self.dedicated_time_as_str:
-                    fd.write(l + '\n')
-            ddfile = os.path.join(self.pbs_conf['PBS_HOME'], 'sched_priv',
-                                  'dedicated_time')
-            self.du.run_copy(self.hostname, src=fn, dest=ddfile, sudo=True,
-                             preserve_permission=False)
-            os.remove(fn)
-        except:
-            raise PbsSchedConfigError(rc=1, rv=False,
-                                      msg='error adding dedicated time')
-
-        if hup:
-            ret = self.signal('-HUP')
-            if ret['rc'] != 0:
-                raise PbsSchedConfigError(rc=1, rv=False,
-                                          msg='error adding dedicated time')
-
-        return True
-
-    def terminate(self):
-        self.signal('-KILL')
-
-    def valgrind(self):
-        """
-        run scheduler instance through valgrind
-        """
-        if self.isUp():
-            self.terminate()
-
-        rv = CliUtils().check_bin('valgrind')
-        if not rv:
-            self.logger.error(self.logprefix + 'valgrind not available')
-            return None
-
-        cmd = ['valgrind']
-
-        cmd += ["--log-file=" + os.path.join(tempfile.gettempdir(),
-                                             'schd.vlgrd')]
-        cmd += [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbs_sched')]
-
-        return self.du.run_cmd(self.hostname, cmd, sudo=True)
-
-    def alloc_to_execvnode(self, chunks):
-        """
-        convert a resource allocation to an execvnode string representation
-        """
-        execvnode = []
-        for chunk in chunks:
-            execvnode += ["(" + chunk.vnode]
-            for res, val in chunk.resources.items():
-                execvnode += [":" + str(res) + "=" + str(val)]
-            for vchk in chunk.vchunk:
-                execvnode += ["+" + vchk.vnode]
-                for res, val in vchk.resources():
-                    execvnode += [":" + str(res) + "=" + str(val)]
-            execvnode += [")+"]
-
-        if len(execvnode) != 0:
-            ev = execvnode[len(execvnode) - 1]
-            ev = ev[:-1]
-            execvnode[len(execvnode) - 1] = ev
-
-        return "".join(execvnode)
-
-    def cycles(self, start=None, end=None, firstN=None, lastN=None):
-        """
-        Analyze scheduler log and return cycle information
-
-        :param start: Optional setting of the start time to consider
-        :param end: Optional setting of the end time to consider
-        :param firstN: Optional setting to consider the given first
-                       N cycles
-        :param lastN: Optional setting to consider only the given
-                      last N cycles
-        """
-        try:
-            from ptl.utils.pbs_logutils import PBSSchedulerLog
-        except:
-            self.logger.error('error loading ptl.utils.pbs_logutils')
-            return None
-
-        if 'sched_log' in self.attributes:
-            logdir = self.attributes['sched_log']
-        else:
-            logdir = os.path.join(self.pbs_conf['PBS_HOME'], 'sched_logs')
-
-        tm = time.strftime("%Y%m%d", time.localtime())
-        log_file = os.path.join(logdir, tm)
-
-        if start is not None or end is not None:
-            analyze_path = os.path.dirname(log_file)
-        else:
-            analyze_path = log_file
-
-        sl = PBSSchedulerLog()
-        sl.analyze(analyze_path, start, end, self.hostname)
-        cycles = sl.cycles
-        if cycles is None or len(cycles) == 0:
-            return []
-
-        if lastN is not None:
-            return cycles[-lastN:]
-        elif firstN is not None:
-            return cycles[:firstN]
-
-        return cycles
-
-    def query_fairshare(self, name=None, id=None):
-        """
-        Parse fairshare data using ``pbsfs`` and populates
-        fairshare_tree.If name or id are specified, return the data
-        associated to that id.Otherwise return the entire fairshare
-        tree
-        """
-        if self.has_snap:
-            return None
-
-        tree = FairshareTree()
-        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
-        if self.sc_name != 'default':
-            cmd += ['-I', self.sc_name]
-
-        ret = self.du.run_cmd(self.hostname, cmd=cmd,
-                              sudo=True, logerr=False)
-
-        if ret['rc'] != 0:
-            raise PbsFairshareError(rc=ret['rc'], rv=None,
-                                    msg=str(ret['err']))
-        pbsfs = ret['out']
-        for p in pbsfs:
-            m = self.fs_tag.match(p)
-            if m:
-                usage = int(m.group('Usage'))
-                perc = float(m.group('Perc'))
-                nm = m.group('name')
-                cgrp = int(m.group('cgrp'))
-                pid = int(m.group('Grp'))
-                nd = tree.get_node(id=pid)
-                if nd:
-                    pname = nd.parent_name
-                else:
-                    pname = None
-                # if an entity has a negative cgroup it should belong
-                # to the unknown resource, we work around the fact that
-                # PBS (up to 13.0) sets this cgroup id to -1 by
-                # reassigning it to 0
-                # TODO: cleanup once PBS code is updated
-                if cgrp < 0:
-                    cgrp = 0
-                node = FairshareNode(name=nm,
-                                     id=cgrp,
-                                     parent_id=pid,
-                                     parent_name=pname,
-                                     nshares=int(m.group('Shares')),
-                                     usage=usage,
-                                     perc={'TREEROOT': perc})
-                if perc:
-                    node.prio['TREEROOT'] = float(usage) / perc
-                if nm == name or id == cgrp:
-                    return node
-
-                tree.add_node(node, apply=False)
-        # now that all nodes are known, update parent and child
-        # relationship of the tree
-        tree.update()
-
-        for node in tree.nodes.values():
-            pnode = node._parent
-            while pnode is not None and pnode.id != 0:
-                if pnode.perc['TREEROOT']:
-                    node.perc[pnode.name] = \
-                        (node.perc['TREEROOT'] * 100 / pnode.perc[
-                         'TREEROOT'])
-                if pnode.name in node.perc and node.perc[pnode.name]:
-                    node.prio[pnode.name] = (
-                        node.usage / node.perc[pnode.name])
-                pnode = pnode._parent
-
-        if name:
-            n = tree.get_node(name)
-            if n is None:
-                raise PbsFairshareError(rc=1, rv=None,
-                                        msg='Unknown entity ' + name)
-            return n
-        if id:
-            n = tree.get_node(id=id)
-            raise PbsFairshareError(rc=1, rv=None,
-                                    msg='Unknown entity ' + str(id))
-            return n
-        return tree
-
-    def set_fairshare_usage(self, name=None, usage=None):
-        """
-        Set the fairshare usage associated to a given entity.
-
-        :param name: The entity to set the fairshare usage of
-        :type name: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser` or None
-        :param usage: The usage value to set
-        """
-        if self.has_snap:
-            return True
-
-        if name is None:
-            self.logger.error(self.logprefix + ' an entity name required')
-            return False
-
-        if isinstance(name, PbsUser):
-            name = str(name)
-
-        if usage is None:
-            self.logger.error(self.logprefix + ' a usage is required')
-            return False
-
-        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
-        if self.sc_name is not 'default':
-            cmd += ['-I', self.sc_name]
-        cmd += ['-s', name, str(usage)]
-        ret = self.du.run_cmd(self.hostname, cmd, runas=self.user)
-        if ret['rc'] == 0:
-            return True
-        return False
-
-    def decay_fairshare_tree(self):
-        """
-        Decay the fairshare tree through pbsfs
-        """
-        if self.has_snap:
-            return True
-
-        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
-        if self.sc_name is not 'default':
-            cmd += ['-I', self.sc_name]
-        cmd += ['-d']
-
-        ret = self.du.run_cmd(self.hostname, cmd, runas=self.user)
-        if ret['rc'] == 0:
-            self.fairshare_tree = self.query_fairshare()
-            return True
-        return False
-
-    def cmp_fairshare_entities(self, name1=None, name2=None):
-        """
-        Compare two fairshare entities. Wrapper of ``pbsfs -c e1 e2``
-
-        :param name1: name of first entity to compare
-        :type name1: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser` or None
-        :param name2: name of second entity to compare
-        :type name2: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser` or None
-        :returns: the name of the entity of higher priority or None on error
-        """
-        if self.has_snap:
-            return None
-
-        if name1 is None or name2 is None:
-            self.logger.erro(self.logprefix + 'two fairshare entity names ' +
-                             'required')
-            return None
-
-        if isinstance(name1, PbsUser):
-            name1 = str(name1)
-
-        if isinstance(name2, PbsUser):
-            name2 = str(name2)
-
-        cmd = [os.path.join(self.pbs_conf['PBS_EXEC'], 'sbin', 'pbsfs')]
-        if self.sc_name is not 'default':
-            cmd += ['-I', self.sc_name]
-        cmd += ['-c', name1, name2]
-        ret = self.du.run_cmd(self.hostname, cmd, runas=self.user)
-        if ret['rc'] == 0:
-            return ret['out'][0]
-        return None
-
-    def parse_resource_group(self, hostname=None, resource_group=None):
-        """
-        Parse the Scheduler's ``resource_group`` file
-
-        :param hostname: The name of the host from which to parse
-                         resource_group
-        :type hostname: str or None
-        :param resource_group: The path to a resource_group file
-        :type resource_group: str or None
-        :returns: A fairshare tree
-        """
-
-        if hostname is None:
-            hostname = self.hostname
-        # if resource_group is None:
-        resource_group = self.resource_group_file
-        # if.has_snap is True acces to sched_priv may not require su privilege
-        ret = self.du.cat(hostname, resource_group, sudo=(not self.has_snap))
-        if ret['rc'] != 0:
-            self.logger.error(hostname + ' error reading ' + resource_group)
-        tree = FairshareTree(hostname, resource_group)
-        root = FairshareNode('root', -1, parent_id=0, nshares=100)
-        tree.add_node(root, apply=False)
-        lines = ret['out']
-        for line in lines:
-            line = line.strip()
-            if not line.startswith("#") and len(line) > 0:
-                # could have 5th column but we only need the first 4
-                (name, id, parent, nshares) = line.split()[:4]
-                node = FairshareNode(name, id, parent_name=parent,
-                                     nshares=nshares)
-                tree.add_node(node, apply=False)
-        tree.update()
-        return tree
-
-    def add_to_resource_group(self, name, fairshare_id, parent, nshares,
-                              validate=True):
-        """
-        Add an entry to the resource group file
-
-        :param name: The name of the entity to add
-        :type name: str or :py:class:`~ptl.lib.pbs_testlib.PbsUser`
-        :param fairshare_id: The numeric identifier of the entity to add
-        :type fairshare_id: int
-        :param parent: The name of the parent group
-        :type parent: str
-        :param nshares: The number of shares associated to the entity
-        :type nshares: int
-        :param validate: if True (the default), validate the
-                         configuration settings.
-        :type validate: bool
-        """
-        if self.resource_group is None:
-            self.resource_group = self.parse_resource_group(
-                self.hostname, self.resource_group_file)
-        if not self.resource_group:
-            self.resource_group = FairshareTree(
-                self.hostname, self.resource_group_file)
-        if isinstance(name, PbsUser):
-            name = str(name)
-        reconfig_time = time.time()
-        rc = self.resource_group.create_node(name, fairshare_id,
-                                             parent_name=parent,
-                                             nshares=nshares)
-        if validate:
-            self.get_pid()
-            self.signal('-HUP')
-            try:
-                self.log_match("Sched;reconfigure;Scheduler is reconfiguring",
-                               starttime=reconfig_time)
-                self.log_match("fairshare;resgroup: error ",
-                               starttime=reconfig_time, existence=False,
-                               max_attempts=2)
-            except PtlLogMatchError:
-                _msg = 'Error in validating resource_group changes'
-                raise PbsSchedConfigError(rc=1, rv=False,
-                                          msg=_msg)
-        return rc
-
-    def job_formula(self, jobid=None, starttime=None, max_attempts=None):
-        """
-        Extract formula value out of scheduler log
-
-        :param jobid: Optional, the job identifier for which to get
-                      the formula.
-        :type jobid: str or int
-        :param starttime: The time at which to start parsing the
-                          scheduler log
-        :param max_attempts: The number of attempts to search for
-                             formula in the logs
-        :type max_attempts: int
-        :returns: If jobid is specified, return the formula value
-                  associated to that job if no jobid is specified,
-                  returns a dictionary mapping job ids to formula
-        """
-        if jobid is None:
-            jobid = "(?P<jobid>.*)"
-            _alljobs = True
-        else:
-            if isinstance(jobid, int):
-                jobid = str(jobid)
-            _alljobs = False
-
-        formula_pat = (".*Job;" + jobid +
-                       ".*;Formula Evaluation = (?P<fval>.*)")
-        if max_attempts is None:
-            max_attempts = self.ptl_conf['max_attempts']
-        rv = self.log_match(formula_pat, regexp=True, starttime=starttime,
-                            n='ALL', allmatch=True,
-                            max_attempts=max_attempts)
-        ret = {}
-        if rv:
-            for _, l in rv:
-                m = re.match(formula_pat, l)
-                if m:
-                    if _alljobs:
-                        jobid = m.group('jobid')
-                    ret[jobid] = float(m.group('fval').strip())
-
-        if not _alljobs:
-            if jobid in ret:
-                return ret[jobid]
-            else:
-                return
-        return ret
-
-
-class FairshareTree(object):
-
-    """
-    Object representation of the Scheduler's resource_group
-    file and pbsfs data
-
-    :param hostname: Hostname of the machine
-    :type hostname: str
-    """
-    du = DshUtils()
-
-    def __init__(self, hostname=None, resource_group=None):
-        self.logger = logging.getLogger(__name__)
-        self.hostname = hostname
-        self.resource_group = resource_group
-        self.nodes = {}
-        self.root = None
-        self._next_id = -1
-
-    def update_resource_group(self):
-        if self.resource_group:
-            fn = self.du.create_temp_file(body=self.__str__())
-            ret = self.du.run_copy(self.hostname, src=fn,
-                                   dest=self.resource_group,
-                                   preserve_permission=False, sudo=True)
-            os.remove(fn)
-
-            if ret['rc'] != 0:
-                raise PbsFairshareError(rc=1, rv=False,
-                                        msg='error updating resource group')
-        return True
-
-    def update(self):
-        for node in self.nodes.values():
-            if node._parent is None:
-                pnode = self.get_node(id=node.parent_id)
-                if pnode:
-                    node._parent = pnode
-                    if node not in pnode._child:
-                        pnode._child.append(node)
-
-    def _add_node(self, node):
-        if node.name == 'TREEROOT' or node.name == 'root':
-            self.root = node
-        self.nodes[node.name] = node
-        if node.parent_name in self.nodes:
-            self.nodes[node.parent_name]._child.append(node)
-            node._parent = self.nodes[node.parent_name]
-
-    def add_node(self, node, apply=True):
-        """
-        add node to the fairshare tree
-        """
-        self._add_node(node)
-        if apply:
-            return self.update_resource_group()
-        return True
-
-    def create_node(self, name, id, parent_name, nshares):
-        """
-        Add an entry to the ``resource_group`` file
-
-        :param name: The name of the entity to add
-        :type name: str
-        :param id: The uniqe numeric identifier of the entity
-        :type id: int
-        :param parent: The name of the parent/group of the entity
-        :type parent: str
-        :param nshares: The number of shares assigned to this entity
-        :type nshares: int
-        :returns: True on success, False otherwise
-        """
-        if name in self.nodes:
-            self.logger.warning('fairshare: node ' + name + ' already defined')
-            return True
-        self.logger.info('creating tree node: ' + name)
-
-        node = FairshareNode(name, id, parent_name=parent_name,
-                             nshares=nshares)
-        self._add_node(node)
-        return self.update_resource_group()
-
-    def get_node(self, name=None, id=None):
-        """
-        Return a node of the fairshare tree identified by either
-        name or id.
-
-        :param name: The name of the entity to query
-        :type name: str or None
-        :param id: The id of the entity to query
-        :returns: The fairshare information of the entity when
-                  found, if not, returns None
-
-        .. note:: The name takes precedence over the id.
-        """
-        for node in self.nodes.values():
-            if name is not None and node.name == name:
-                return node
-            if id is not None and node.id == id:
-                return node
-        return None
-
-    def __batch_status__(self):
-        """
-        Convert fairshare tree object to a batch status format
-        """
-        dat = []
-        for node in self.nodes.values():
-            if node.name == 'root':
-                continue
-            einfo = {}
-            einfo['cgroup'] = node.id
-            einfo['id'] = node.name
-            einfo['group'] = node.parent_id
-            einfo['nshares'] = node.nshares
-            if len(node.prio) > 0:
-                p = []
-                for k, v in node.prio.items():
-                    p += ["%s:%d" % (k, int(v))]
-                einfo['penalty'] = ", ".join(p)
-            einfo['usage'] = node.usage
-            if node.perc:
-                p = []
-                for k, v in node.perc.items():
-                    p += ["%s:%.3f" % (k, float(v))]
-                    einfo['shares_perc'] = ", ".join(p)
-            ppnode = self.get_node(id=node.parent_id)
-            if ppnode:
-                ppname = ppnode.name
-                ppid = ppnode.id
-            else:
-                ppnode = self.get_node(name=node.parent_name)
-                if ppnode:
-                    ppname = ppnode.name
-                    ppid = ppnode.id
-                else:
-                    ppname = ''
-                    ppid = None
-            einfo['parent'] = "%s (%s) " % (str(ppid), ppname)
-            dat.append(einfo)
-        return dat
-
-    def get_next_id(self):
-        self._next_id -= 1
-        return self._next_id
-
-    def __repr__(self):
-        return self.__str__()
-
-    def _dfs(self, node, dat):
-        if node.name != 'root':
-            s = []
-            if node.name is not None:
-                s += [node.name]
-            if node.id is not None:
-                s += [str(node.id)]
-            if node.parent_name is not None:
-                s += [node.parent_name]
-            if node.nshares is not None:
-                s += [str(node.nshares)]
-            if node.usage is not None:
-                s += [str(node.usage)]
-            dat.append("\t".join(s))
-        for n in node._child:
-            self._dfs(n, dat)
-
-    def __str__(self):
-        dat = []
-        if self.root:
-            self._dfs(self.root, dat)
-        if len(dat) > 0:
-            dat += ['\n']
-        return "\n".join(dat)
-
-
-class FairshareNode(object):
-
-    """
-    Object representation of the fairshare data as queryable through
-    the command ``pbsfs``.
-
-    :param name: Name of fairshare node
-    :type name: str or None
-    :param nshares: Number of shares
-    :type nshares: int or None
-    :param usage: Fairshare usage
-    :param perc: Percentage the entity has of the tree
-    """
-
-    def __init__(self, name=None, id=None, parent_name=None, parent_id=None,
-                 nshares=None, usage=None, perc=None):
-        self.name = name
-        self.id = id
-        self.parent_name = parent_name
-        self.parent_id = parent_id
-        self.nshares = nshares
-        self.usage = usage
-        self.perc = perc
-        self.prio = {}
-        self._parent = None
-        self._child = []
-
-    def __str__(self):
-        ret = []
-        if self.name is not None:
-            ret.append(self.name)
-        if self.id is not None:
-            ret.append(str(self.id))
-        if self.parent_name is not None:
-            ret.append(str(self.parent_name))
-        if self.nshares is not None:
-            ret.append(str(self.nshares))
-        if self.usage is not None:
-            ret.append(str(self.usage))
-        if self.perc is not None:
-            ret.append(str(self.perc))
-        return "\t".join(ret)
-
-
 class MoM(PBSService):
 
     """
@@ -14126,6 +11008,173 @@ class Hook(PBSObject):
         self.server = server
 
 
+
+class Resource(PBSObject):
+
+    """
+    PBS resource referenced by name, type and flag
+
+    :param name: Resource name
+    :type name: str or None
+    :param type: Type of resource
+    """
+
+    def __init__(self, name=None, type=None, flag=None):
+        PBSObject.__init__(self, name)
+        self.set_name(name)
+        self.set_type(type)
+        self.set_flag(flag)
+
+    def __del__(self):
+        del self.__dict__
+
+    def set_name(self, name):
+        """
+        Set the resource name
+        """
+        self.name = name
+        self.attributes['id'] = name
+
+    def set_type(self, type):
+        """
+        Set the resource type
+        """
+        self.type = type
+        self.attributes['type'] = type
+
+    def set_flag(self, flag):
+        """
+        Set the flag
+        """
+        self.flag = flag
+        self.attributes['flag'] = flag
+
+    def __str__(self):
+        s = [self.attributes['id']]
+        if 'type' in self.attributes:
+            s.append('type=' + self.attributes['type'])
+        if 'flag' in self.attributes:
+            s.append('flag=' + self.attributes['flag'])
+        return " ".join(s)
+
+
+class Queue(PBSObject):
+
+    """
+    PBS Queue container, holds attributes of the queue and
+    pointer to server
+
+    :param name: Queue name
+    :type name: str or None
+    :param attrs: Queue attributes
+    :type attrs: Dictionary
+    """
+
+    dflt_attributes = {}
+
+    def __init__(self, name=None, attrs={}, server=None):
+        PBSObject.__init__(self, name, attrs, self.dflt_attributes)
+
+        self.server = server
+        m = ['queue']
+        if server is not None:
+            m += ['@' + server.shortname]
+        if self.name is not None:
+            m += [' ', self.name]
+        m += [': ']
+        self.logprefix = "".join(m)
+
+    def __del__(self):
+        del self.__dict__
+
+    def revert_to_defaults(self):
+        """
+        reset queue attributes to defaults
+        """
+
+        ignore_attrs = ['id', ATTR_count, ATTR_rescassn]
+        ignore_attrs += [ATTR_qtype, ATTR_enable, ATTR_start, ATTR_total]
+        ignore_attrs += ['THE_END']
+
+        len_attrs = len(ignore_attrs)
+        unsetlist = []
+        setdict = {}
+
+        self.logger.info(
+            self.logprefix +
+            "reverting configuration to defaults")
+        if self.server is not None:
+            self.server.status(QUEUE, id=self.name, level=logging.DEBUG)
+
+        for k in self.attributes.keys():
+            for i in range(len_attrs):
+                if k.startswith(ignore_attrs[i]):
+                    break
+            if (i == (len_attrs - 1)) and k not in self.dflt_attributes:
+                unsetlist.append(k)
+
+        if len(unsetlist) != 0 and self.server is not None:
+            try:
+                self.server.manager(MGR_CMD_UNSET, MGR_OBJ_QUEUE, unsetlist,
+                                    self.name)
+            except PbsManagerError as e:
+                self.logger.error(e.msg)
+
+        for k in self.dflt_attributes.keys():
+            if (k not in self.attributes or
+                    self.attributes[k] != self.dflt_attributes[k]):
+                setdict[k] = self.dflt_attributes[k]
+
+        if len(setdict.keys()) != 0 and self.server is not None:
+            self.server.manager(MGR_CMD_SET, MGR_OBJ_QUEUE, setdict)
+
+
+class EquivClass(PBSObject):
+
+    """
+    Equivalence class holds information on a collection of entities
+    grouped according to a set of attributes
+    :param attributes: Dictionary of attributes
+    :type attributes: Dictionary
+    :param entities: List of entities
+    :type entities: List
+    """
+
+    def __init__(self, name, attributes={}, entities=[]):
+        self.name = name
+        self.attributes = attributes
+        self.entities = entities
+
+    def add_entity(self, entity):
+        """
+        Add entities
+
+        :param entity: Entity to add
+        :type entity: str
+        """
+        if entity not in self.entities:
+            self.entities.append(entity)
+
+    def __str__(self):
+        s = [str(len(self.entities)), ":", ":".join(self.name)]
+        return "".join(s)
+
+    def show(self, showobj=False):
+        """
+        Show the entities
+
+        :param showobj: If true then show the entities
+        :type showobj: bool
+        """
+        s = " && ".join(self.name) + ': '
+        if showobj:
+            s += str(self.entities)
+        else:
+            s += str(len(self.entities))
+        print(s)
+        return s
+
+
 class ResourceResv(PBSObject):
 
     """
@@ -14527,62 +11576,6 @@ while True:
         self.set_execargs(script_path, duration)
 
 
-class Reservation(ResourceResv):
-
-    """
-    PBS Reservation. Attributes and Resources
-
-    :param attrs: Reservation attributes
-    :type attrs: Dictionary
-    :param hosts: List of hosts for maintenance
-    :type hosts: List
-    """
-
-    dflt_attributes = {}
-
-    def __init__(self, username=TEST_USER, attrs=None, hosts=None):
-        self.server = {}
-        self.script = None
-
-        if attrs:
-            self.attributes = attrs
-        else:
-            self.attributes = {}
-
-        if hosts:
-            self.hosts = hosts
-        else:
-            self.hosts = []
-
-        if username is None:
-            userinfo = pwd.getpwuid(os.getuid())
-            self.username = userinfo[0]
-        else:
-            self.username = str(username)
-
-        # These are not in dflt_attributes because of the conversion to CLI
-        # options is done strictly
-        if ATTR_resv_start not in self.attributes and \
-           ATTR_job not in self.attributes:
-            self.attributes[ATTR_resv_start] = str(int(time.time()) +
-                                                   36 * 3600)
-
-        if ATTR_resv_end not in self.attributes and \
-           ATTR_job not in self.attributes:
-            if ATTR_resv_duration not in self.attributes:
-                self.attributes[ATTR_resv_end] = str(int(time.time()) +
-                                                     72 * 3600)
-
-        PBSObject.__init__(self, None, self.attributes, self.dflt_attributes)
-        self.set_attributes()
-
-    def __del__(self):
-        del self.__dict__
-
-    def set_variable_list(self, user, workdir=None):
-        pass
-
-
 class InteractiveJob(threading.Thread):
 
     """
@@ -14730,458 +11723,276 @@ class InteractiveJob(threading.Thread):
         return self.jobid
 
 
-class Queue(PBSObject):
+class Reservation(ResourceResv):
 
     """
-    PBS Queue container, holds attributes of the queue and
-    pointer to server
+    PBS Reservation. Attributes and Resources
 
-    :param name: Queue name
-    :type name: str or None
-    :param attrs: Queue attributes
+    :param attrs: Reservation attributes
     :type attrs: Dictionary
+    :param hosts: List of hosts for maintenance
+    :type hosts: List
     """
 
     dflt_attributes = {}
 
-    def __init__(self, name=None, attrs={}, server=None):
-        PBSObject.__init__(self, name, attrs, self.dflt_attributes)
+    def __init__(self, username=TEST_USER, attrs=None, hosts=None):
+        self.server = {}
+        self.script = None
 
-        self.server = server
-        m = ['queue']
-        if server is not None:
-            m += ['@' + server.shortname]
-        if self.name is not None:
-            m += [' ', self.name]
-        m += [': ']
-        self.logprefix = "".join(m)
+        if attrs:
+            self.attributes = attrs
+        else:
+            self.attributes = {}
+
+        if hosts:
+            self.hosts = hosts
+        else:
+            self.hosts = []
+
+        if username is None:
+            userinfo = pwd.getpwuid(os.getuid())
+            self.username = userinfo[0]
+        else:
+            self.username = str(username)
+
+        # These are not in dflt_attributes because of the conversion to CLI
+        # options is done strictly
+        if ATTR_resv_start not in self.attributes and \
+           ATTR_job not in self.attributes:
+            self.attributes[ATTR_resv_start] = str(int(time.time()) +
+                                                   36 * 3600)
+
+        if ATTR_resv_end not in self.attributes and \
+           ATTR_job not in self.attributes:
+            if ATTR_resv_duration not in self.attributes:
+                self.attributes[ATTR_resv_end] = str(int(time.time()) +
+                                                     72 * 3600)
+
+        PBSObject.__init__(self, None, self.attributes, self.dflt_attributes)
+        self.set_attributes()
 
     def __del__(self):
         del self.__dict__
 
-    def revert_to_defaults(self):
-        """
-        reset queue attributes to defaults
-        """
-
-        ignore_attrs = ['id', ATTR_count, ATTR_rescassn]
-        ignore_attrs += [ATTR_qtype, ATTR_enable, ATTR_start, ATTR_total]
-        ignore_attrs += ['THE_END']
-
-        len_attrs = len(ignore_attrs)
-        unsetlist = []
-        setdict = {}
-
-        self.logger.info(
-            self.logprefix +
-            "reverting configuration to defaults")
-        if self.server is not None:
-            self.server.status(QUEUE, id=self.name, level=logging.DEBUG)
-
-        for k in self.attributes.keys():
-            for i in range(len_attrs):
-                if k.startswith(ignore_attrs[i]):
-                    break
-            if (i == (len_attrs - 1)) and k not in self.dflt_attributes:
-                unsetlist.append(k)
-
-        if len(unsetlist) != 0 and self.server is not None:
-            try:
-                self.server.manager(MGR_CMD_UNSET, MGR_OBJ_QUEUE, unsetlist,
-                                    self.name)
-            except PbsManagerError as e:
-                self.logger.error(e.msg)
-
-        for k in self.dflt_attributes.keys():
-            if (k not in self.attributes or
-                    self.attributes[k] != self.dflt_attributes[k]):
-                setdict[k] = self.dflt_attributes[k]
-
-        if len(setdict.keys()) != 0 and self.server is not None:
-            self.server.manager(MGR_CMD_SET, MGR_OBJ_QUEUE, setdict)
+    def set_variable_list(self, user, workdir=None):
+        pass
 
 
-class PBSInitServices(object):
+class FairshareTree(object):
+
     """
-    PBS initialization services
+    Object representation of the Scheduler's resource_group
+    file and pbsfs data
 
-    :param hostname: Machine hostname
-    :type hostname: str or None
-    :param conf: PBS configuaration file
-    :type conf: str or None
+    :param hostname: Hostname of the machine
+    :type hostname: str
     """
+    du = DshUtils()
 
-    def __init__(self, hostname=None, conf=None):
+    def __init__(self, hostname=None, resource_group=None):
         self.logger = logging.getLogger(__name__)
         self.hostname = hostname
-        if self.hostname is None:
-            self.hostname = socket.gethostname()
-        self.dflt_conf_file = os.environ.get('PBS_CONF_FILE', '/etc/pbs.conf')
-        self.conf_file = conf
-        self.du = DshUtils()
-        self.is_linux = sys.platform.startswith('linux')
+        self.resource_group = resource_group
+        self.nodes = {}
+        self.root = None
+        self._next_id = -1
 
-    def initd(self, hostname=None, op='status', conf_file=None,
-              init_script=None, daemon='all'):
-        """
-        Run the init script for a given operation
+    def update_resource_group(self):
+        if self.resource_group:
+            fn = self.du.create_temp_file(body=self.__str__())
+            ret = self.du.run_copy(self.hostname, src=fn,
+                                   dest=self.resource_group,
+                                   preserve_permission=False, sudo=True)
+            os.remove(fn)
 
-        :param hostname: hostname on which to execute the init script
-        :type hostname: str or None
-        :param op: one of status, start, stop, restart
-        :type op: str
-        :param conf_file: optional path to a configuration file
-        :type conf_file: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        :param daemon: name of daemon to operate on. one of server, mom,
-                       sched, comm or all
-        :type daemon: str
-        """
-        if hostname is None:
-            hostname = self.hostname
-        if conf_file is None:
-            conf_file = self.conf_file
-        return self._unix_initd(hostname, op, conf_file, init_script, daemon)
+            if ret['rc'] != 0:
+                raise PbsFairshareError(rc=1, rv=False,
+                                        msg='error updating resource group')
+        return True
 
-    def restart(self, hostname=None, init_script=None):
-        """
-        Run the init script for a restart operation
+    def update(self):
+        for node in self.nodes.values():
+            if node._parent is None:
+                pnode = self.get_node(id=node.parent_id)
+                if pnode:
+                    node._parent = pnode
+                    if node not in pnode._child:
+                        pnode._child.append(node)
 
-        :param hostname: hostname on which to execute the init script
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='restart', init_script=init_script)
+    def _add_node(self, node):
+        if node.name == 'TREEROOT' or node.name == 'root':
+            self.root = node
+        self.nodes[node.name] = node
+        if node.parent_name in self.nodes:
+            self.nodes[node.parent_name]._child.append(node)
+            node._parent = self.nodes[node.parent_name]
 
-    def restart_server(self, hostname=None, init_script=None):
+    def add_node(self, node, apply=True):
         """
-        Run the init script for a restart server
+        add node to the fairshare tree
+        """
+        self._add_node(node)
+        if apply:
+            return self.update_resource_group()
+        return True
 
-        :param hostname: hostname on which to restart server
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
+    def create_node(self, name, id, parent_name, nshares):
         """
-        return self.initd(hostname, op='restart', init_script=init_script,
-                          daemon='server')
+        Add an entry to the ``resource_group`` file
 
-    def restart_mom(self, hostname=None, init_script=None):
+        :param name: The name of the entity to add
+        :type name: str
+        :param id: The uniqe numeric identifier of the entity
+        :type id: int
+        :param parent: The name of the parent/group of the entity
+        :type parent: str
+        :param nshares: The number of shares assigned to this entity
+        :type nshares: int
+        :returns: True on success, False otherwise
         """
-        Run the init script for a restart mom
+        if name in self.nodes:
+            self.logger.warning('fairshare: node ' + name + ' already defined')
+            return True
+        self.logger.info('creating tree node: ' + name)
 
-        :param hostname: hostname on which to restart mom
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='restart', init_script=init_script,
-                          daemon='mom')
+        node = FairshareNode(name, id, parent_name=parent_name,
+                             nshares=nshares)
+        self._add_node(node)
+        return self.update_resource_group()
 
-    def restart_sched(self, hostname=None, init_script=None):
+    def get_node(self, name=None, id=None):
         """
-        Run the init script for a restart sched
+        Return a node of the fairshare tree identified by either
+        name or id.
 
-        :param hostname: hostname on which to restart sched
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='restart', init_script=init_script,
-                          daemon='sched')
+        :param name: The name of the entity to query
+        :type name: str or None
+        :param id: The id of the entity to query
+        :returns: The fairshare information of the entity when
+                  found, if not, returns None
 
-    def restart_comm(self, hostname=None, init_script=None):
+        .. note:: The name takes precedence over the id.
         """
-        Run the init script for a restart comm
+        for node in self.nodes.values():
+            if name is not None and node.name == name:
+                return node
+            if id is not None and node.id == id:
+                return node
+        return None
 
-        :param hostname: hostname on which to restart comm
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
+    def __batch_status__(self):
         """
-        return self.initd(hostname, op='restart', init_script=init_script,
-                          daemon='comm')
-
-    def start(self, hostname=None, init_script=None):
+        Convert fairshare tree object to a batch status format
         """
-        Run the init script for a start operation
-
-        :param hostname: hostname on which to execute the init script
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='start', init_script=init_script)
-
-    def start_server(self, hostname=None, init_script=None):
-        """
-        Run the init script for a start server
-
-        :param hostname: hostname on which to start server
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='start', init_script=init_script,
-                          daemon='server')
-
-    def start_mom(self, hostname=None, init_script=None):
-        """
-        Run the init script for a start mom
-
-        :param hostname: hostname on which to start mom
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='start', init_script=init_script,
-                          daemon='mom')
-
-    def start_sched(self, hostname=None, init_script=None):
-        """
-        Run the init script for a start sched
-
-        :param hostname: hostname on which to start sched
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='start', init_script=init_script,
-                          daemon='sched')
-
-    def start_comm(self, hostname=None, init_script=None):
-        """
-        Run the init script for a start comm
-
-        :param hostname: hostname on which to start comm
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='start', init_script=init_script,
-                          daemon='comm')
-
-    def stop(self, hostname=None, init_script=None):
-        """
-        Run the init script for a stop operation
-
-        :param hostname: hostname on which to execute the init script
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='stop', init_script=init_script)
-
-    def stop_server(self, hostname=None, init_script=None):
-        """
-        Run the init script for a stop server
-
-        :param hostname: hostname on which to stop server
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='stop', init_script=init_script,
-                          daemon='server')
-
-    def stop_mom(self, hostname=None, init_script=None):
-        """
-        Run the init script for a stop mom
-
-        :param hostname: hostname on which to stop mom
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='stop', init_script=init_script,
-                          daemon='mom')
-
-    def stop_sched(self, hostname=None, init_script=None):
-        """
-        Run the init script for a stop sched
-
-        :param hostname: hostname on which to stop sched
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='stop', init_script=init_script,
-                          daemon='sched')
-
-    def stop_comm(self, hostname=None, init_script=None):
-        """
-        Run the init script for a stop comm
-
-        :param hostname: hostname on which to stop comm
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='stop', init_script=init_script,
-                          daemon='comm')
-
-    def status(self, hostname=None, init_script=None):
-        """
-        Run the init script for a status operation
-
-        :param hostname: hostname on which to execute the init script
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='status', init_script=init_script)
-
-    def status_server(self, hostname=None, init_script=None):
-        """
-        Run the init script for a status server
-
-        :param hostname: hostname on which to status server
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='status', init_script=init_script,
-                          daemon='server')
-
-    def status_mom(self, hostname=None, init_script=None):
-        """
-        Run the init script for a status mom
-
-        :param hostname: hostname on which to status mom
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='status', init_script=init_script,
-                          daemon='mom')
-
-    def status_sched(self, hostname=None, init_script=None):
-        """
-        Run the init script for a status sched
-
-        :param hostname: hostname on which to status sched
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='status', init_script=init_script,
-                          daemon='sched')
-
-    def status_comm(self, hostname=None, init_script=None):
-        """
-        Run the init script for a status comm
-
-        :param hostname: hostname on which to status comm
-        :type hostname: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        """
-        return self.initd(hostname, op='status', init_script=init_script,
-                          daemon='comm')
-
-    def _unix_initd(self, hostname, op, conf_file, init_script, daemon):
-        """
-        Helper function for initd ``(*nix version)``
-
-        :param hostname: hostname on which init script should run
-        :type hostname: str
-        :param op: Operation on daemons - start, stop, restart or status
-        :op type: str
-        :param conf_file: Optional path to the pbs configuration file
-        :type conf_file: str or None
-        :param init_script: optional path to a PBS init script
-        :type init_script: str or None
-        :param daemon: name of daemon to operate on. one of server, mom,
-                       sched, comm or all
-        :type daemon: str
-        """
-        init_cmd = copy.copy(self.du.sudo_cmd)
-        if daemon is not None and daemon != 'all':
-            conf = self.du.parse_pbs_config(hostname, conf_file)
-            dconf = {
-                'PBS_START_SERVER': 0,
-                'PBS_START_MOM': 0,
-                'PBS_START_SCHED': 0,
-                'PBS_START_COMM': 0
-            }
-            if daemon == 'server' and conf.get('PBS_START_SERVER', 0) != 0:
-                dconf['PBS_START_SERVER'] = 1
-            elif daemon == 'mom' and conf.get('PBS_START_MOM', 0) != 0:
-                dconf['PBS_START_MOM'] = 1
-            elif daemon == 'sched' and conf.get('PBS_START_SCHED', 0) != 0:
-                dconf['PBS_START_SCHED'] = 1
-            elif daemon == 'comm' and conf.get('PBS_START_COMM', 0) != 0:
-                dconf['PBS_START_COMM'] = 1
-            for k, v in dconf.items():
-                init_cmd += ["%s=%s" % (k, str(v))]
-            _as = True
-        else:
-            fn = None
-            if (conf_file is not None) and (conf_file != self.dflt_conf_file):
-                init_cmd += ['PBS_CONF_FILE=' + conf_file]
-                _as = True
+        dat = []
+        for node in self.nodes.values():
+            if node.name == 'root':
+                continue
+            einfo = {}
+            einfo['cgroup'] = node.id
+            einfo['id'] = node.name
+            einfo['group'] = node.parent_id
+            einfo['nshares'] = node.nshares
+            if len(node.prio) > 0:
+                p = []
+                for k, v in node.prio.items():
+                    p += ["%s:%d" % (k, int(v))]
+                einfo['penalty'] = ", ".join(p)
+            einfo['usage'] = node.usage
+            if node.perc:
+                p = []
+                for k, v in node.perc.items():
+                    p += ["%s:%.3f" % (k, float(v))]
+                    einfo['shares_perc'] = ", ".join(p)
+            ppnode = self.get_node(id=node.parent_id)
+            if ppnode:
+                ppname = ppnode.name
+                ppid = ppnode.id
             else:
-                _as = False
-            conf = self.du.parse_pbs_config(hostname, conf_file)
-        if (init_script is None) or (not init_script.startswith('/')):
-            if 'PBS_EXEC' not in conf:
-                msg = 'Missing PBS_EXEC setting in pbs config'
-                raise PbsInitServicesError(rc=1, rv=False, msg=msg)
-            if init_script is None:
-                init_script = os.path.join(conf['PBS_EXEC'], 'libexec',
-                                           'pbs_init.d')
-            else:
-                init_script = os.path.join(conf['PBS_EXEC'], 'etc',
-                                           init_script)
-            if not self.du.isfile(hostname, path=init_script, sudo=True):
-                # Could be Type 3 installation where we will not have
-                # PBS_EXEC/libexec/pbs_init.d
-                return []
-        init_cmd += [init_script, op]
-        msg = 'running init script to ' + op + ' pbs'
-        if daemon is not None and daemon != 'all':
-            msg += ' ' + daemon
-        msg += ' on ' + hostname
-        if conf_file is not None:
-            msg += ' using ' + conf_file
-        msg += ' init_cmd=%s' % (str(init_cmd))
-        self.logger.info(msg)
-        ret = self.du.run_cmd(hostname, init_cmd, as_script=_as,
-                              logerr=False)
-        if ret['rc'] != 0:
-            raise PbsInitServicesError(rc=ret['rc'], rv=False,
-                                       msg='\n'.join(ret['err']))
-        else:
-            return ret
+                ppnode = self.get_node(name=node.parent_name)
+                if ppnode:
+                    ppname = ppnode.name
+                    ppid = ppnode.id
+                else:
+                    ppname = ''
+                    ppid = None
+            einfo['parent'] = "%s (%s) " % (str(ppid), ppname)
+            dat.append(einfo)
+        return dat
 
-    def switch_version(self, hostname=None, version=None):
-        """
-        Switch to another version of PBS installed on the system
+    def get_next_id(self):
+        self._next_id -= 1
+        return self._next_id
 
-        :param hostname: The hostname to operate on
-        :type hostname: str or None
-        :param version: version to switch
-        """
-        pbs_conf = self.du.parse_pbs_config(hostname)
-        if 'PBS_EXEC' in pbs_conf:
-            dn = os.path.dirname(pbs_conf['PBS_EXEC'])
-            newver = os.path.join(dn, version)
-            ret = self.du.isdir(hostname, path=newver)
-            if not ret:
-                msg = 'no version ' + version + ' on host ' + hostname
-                raise PbsInitServicesError(rc=0, rv=False, msg=msg)
-            self.stop(hostname)
-            dflt = os.path.join(dn, 'default')
-            ret = self.du.isfile(hostname, path=dflt)
-            if ret:
-                self.logger.info('removing symbolic link ' + dflt)
-                self.du.rm(hostname, dflt, sudo=True, logerr=False)
-                self.du.set_pbs_config(hostname, confs={'PBS_EXEC': dflt})
-            else:
-                self.du.set_pbs_config(hostname, confs={'PBS_EXEC': newver})
+    def __repr__(self):
+        return self.__str__()
 
-            self.logger.info('linking ' + newver + ' to ' + dflt)
-            self.du.run_cmd(hostname, ['ln', '-s', newver, dflt],
-                            sudo=True, logerr=False)
-            self.start(hostname)
+    def _dfs(self, node, dat):
+        if node.name != 'root':
+            s = []
+            if node.name is not None:
+                s += [node.name]
+            if node.id is not None:
+                s += [str(node.id)]
+            if node.parent_name is not None:
+                s += [node.parent_name]
+            if node.nshares is not None:
+                s += [str(node.nshares)]
+            if node.usage is not None:
+                s += [str(node.usage)]
+            dat.append("\t".join(s))
+        for n in node._child:
+            self._dfs(n, dat)
+
+    def __str__(self):
+        dat = []
+        if self.root:
+            self._dfs(self.root, dat)
+        if len(dat) > 0:
+            dat += ['\n']
+        return "\n".join(dat)
+
+
+class FairshareNode(object):
+
+    """
+    Object representation of the fairshare data as queryable through
+    the command ``pbsfs``.
+
+    :param name: Name of fairshare node
+    :type name: str or None
+    :param nshares: Number of shares
+    :type nshares: int or None
+    :param usage: Fairshare usage
+    :param perc: Percentage the entity has of the tree
+    """
+
+    def __init__(self, name=None, id=None, parent_name=None, parent_id=None,
+                 nshares=None, usage=None, perc=None):
+        self.name = name
+        self.id = id
+        self.parent_name = parent_name
+        self.parent_id = parent_id
+        self.nshares = nshares
+        self.usage = usage
+        self.perc = perc
+        self.prio = {}
+        self._parent = None
+        self._child = []
+
+    def __str__(self):
+        ret = []
+        if self.name is not None:
+            ret.append(self.name)
+        if self.id is not None:
+            ret.append(str(self.id))
+        if self.parent_name is not None:
+            ret.append(str(self.parent_name))
+        if self.nshares is not None:
+            ret.append(str(self.nshares))
+        if self.usage is not None:
+            ret.append(str(self.usage))
+        if self.perc is not None:
+            ret.append(str(self.perc))
+        return "\t".join(ret)
