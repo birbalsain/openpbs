@@ -55,7 +55,7 @@ from distutils.version import LooseVersion
 from ptl.lib.pbs_api_to_cli import api_to_cli
 from ptl.utils.pbs_dshutils import DshUtils
 from ptl.lib.pbs_testlib import *
-
+from ptl.lib.pbs_type import PbsTypeSize
 
 class BatchUtils(object):
 

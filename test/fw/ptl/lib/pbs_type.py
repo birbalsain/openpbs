@@ -44,6 +44,7 @@ import re
 import sys
 import time
 
+from ptl.lib.batch_utils import *
 
 class PbsTypeSize(str):
 

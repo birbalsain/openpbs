@@ -45,6 +45,19 @@ import errno
 
 import ptl
 from ptl.lib.pbs_testlib import *
+from ptl.lib.ptl_exception import *
+from ptl.lib.pbs_error import *
+from ptl.lib.expect_action import *
+from ptl.lib.batch_utils import *
+from ptl.lib.pbs_type import *
+from ptl.lib.pbsobject import *
+from ptl.lib.pbs_init_service import *
+from ptl.lib.pbs_service import *
+
+from ptl.lib.mom import *
+from ptl.lib.server import *
+from ptl.lib.comm import *
+from ptl.lib.sched import *
 from ptl.utils.pbs_testsuite import PBS_GROUPS
 
 # trap SIGINT and SIGPIPE

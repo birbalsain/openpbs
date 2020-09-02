@@ -48,8 +48,9 @@ import traceback
 from datetime import datetime, timedelta, tzinfo
 from subprocess import PIPE, Popen
 
-from ptl.lib.pbs_testlib import (EQ, JOB, NODE, SET, BatchUtils, ResourceResv,
-                                 Server)
+from ptl.lib.pbs_testlib import (EQ, JOB, NODE, SET, ResourceResv)
+from ptl.lib.batch_utils import *
+from ptl.lib.server import *
 from ptl.utils.pbs_dshutils import DshUtils
 
 """
