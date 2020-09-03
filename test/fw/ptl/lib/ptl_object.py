@@ -47,7 +47,7 @@ import time
 from collections import OrderedDict
 
 from ptl.lib.pbs_testlib import *
-from ptl.lib.batch_utils import *
+from ptl.lib.ptl_batchutils import *
 
 
 class PBSObject(object):

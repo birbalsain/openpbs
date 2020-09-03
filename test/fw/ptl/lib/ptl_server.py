@@ -69,26 +69,6 @@ from ptl.utils.pbs_procutils import ProcUtils
 from ptl.utils.pbs_testusers import (ROOT_USER, TEST_USER, PbsUser,
                                      DAEMON_SERVICE_USER)
 
-from ptl.lib.expect_action import *
-from ptl.lib.ptl_exception import *
-from ptl.lib.pbs_error import *
-from ptl.lib.expect_action import *
-from ptl.lib.batch_utils import *
-from ptl.lib.pbs_type import *
-from ptl.lib.pbsobject import *
-from ptl.lib.pbs_init_service import *
-from ptl.lib.pbs_service import *
-from ptl.lib.expect_action import *
-from ptl.lib.pbs_service import *
-def get_server_obj(name=None, attrs={}, defaults={}, pbsconf_file=None,
-                 snapmap={}, snap=None, client=None, client_pbsconf_file=None,
-                 db_access=None, stat=True):
-    return Server(name, attrs, defaults,pbsconf_file, snapmap, snap, client, client_pbsconf_file, db_access, stat)
-
-from ptl.lib.mom import get_mom_obj
-from ptl.lib.sched import get_sched_obj
-from ptl.lib.comm import get_comm_obj
-from ptl.lib.pbs_testlib import *
 try:
     import psycopg2
     PSYCOPG = True
@@ -106,6 +86,26 @@ except:
                          "to make it\n")
         raise ImportError
     API_OK = False
+
+from ptl.lib.ptl_expect_action import *
+from ptl.lib.ptl_error import *
+from ptl.lib.ptl_batchutils import *
+from ptl.lib.ptl_types import *
+from ptl.lib.ptl_object import *
+from ptl.lib.ptl_service import *
+from ptl.lib.ptl_resources import *
+from ptl.lib.ptl_job import *
+def get_server_obj(name=None, attrs={}, defaults={}, pbsconf_file=None,
+                 snapmap={}, snap=None, client=None, client_pbsconf_file=None,
+                 db_access=None, stat=True):
+    return Server(name, attrs, defaults,pbsconf_file, snapmap, snap, client, client_pbsconf_file, db_access, stat)
+
+from ptl.lib.ptl_mom import get_mom_obj
+from ptl.lib.ptl_sched import get_sched_obj
+from ptl.lib.ptl_comm import get_comm_obj
+from ptl.lib.pbs_testlib import *
+
+
 class Server(PBSService):
 
     """

@@ -37,50 +37,25 @@
 # "OpenPBS®", "PBS Professional®", and "PBS Pro™" and Altair's logos is
 # subject to Altair's trademark licensing policies.
 
-
 import ast
 import base64
-import collections
 import copy
 import datetime
-import grp
 import json
 import logging
 import os
-import pickle
 import pwd
-import random
 import re
 import socket
 import string
 import sys
 import tempfile
-import threading
 import time
-import traceback
-from collections import OrderedDict
 from distutils.version import LooseVersion
-from operator import itemgetter
 
-from ptl.lib.pbs_api_to_cli import api_to_cli
-from ptl.utils.pbs_cliutils import CliUtils
-from ptl.utils.pbs_dshutils import DshUtils, PtlUtilError
-from ptl.utils.pbs_procutils import ProcUtils
+
 from ptl.utils.pbs_testusers import (ROOT_USER, TEST_USER, PbsUser,
                                      DAEMON_SERVICE_USER)
-from ptl.lib.ptl_exception import *
-from ptl.lib.pbs_error import *
-from ptl.lib.expect_action import *
-from ptl.lib.batch_utils import *
-from ptl.lib.pbs_type import *
-from ptl.lib.pbsobject import *
-from ptl.lib.pbs_init_service import *
-from ptl.lib.pbs_service import * 
-try:
-    import psycopg2
-    PSYCOPG = True
-except:
-    PSYCOPG = False
 
 try:
     from ptl.lib.pbs_ifl import *
@@ -94,16 +69,20 @@ except:
         raise ImportError
     API_OK = False
 
-
-from ptl.lib.pbs_service import *
+from ptl.lib.ptl_error import *
+from ptl.lib.ptl_expect_action import *
+from ptl.lib.ptl_batchutils import *
+from ptl.lib.ptl_types import *
+from ptl.lib.ptl_object import *
+from ptl.lib.ptl_service import * 
 def get_mom_obj(name=None, attrs={}, pbsconf_file=None, snapmap={},
                  snap=None, server=None, db_access=None):
     return MoM(name, attrs, pbsconf_file, snapmap, snap, server, db_access)
 
-from ptl.lib.server import get_server_obj
-from ptl.lib.sched import get_sched_obj
-from ptl.lib.comm import get_comm_obj
+from ptl.lib.ptl_server import get_server_obj
 from ptl.lib.pbs_testlib import *
+
+
 class MoM(PBSService):
 
     """

@@ -38,64 +38,18 @@
 # subject to Altair's trademark licensing policies.
 
 
-import ast
-import base64
-import collections
 import copy
-import datetime
-import grp
-import json
 import logging
 import os
-import pickle
 import pwd
-import random
 import re
-import socket
-import string
 import sys
-import tempfile
-import threading
 import time
-import traceback
-from collections import OrderedDict
-from distutils.version import LooseVersion
-from operator import itemgetter
 
-from ptl.lib.pbs_api_to_cli import api_to_cli
-from ptl.utils.pbs_cliutils import CliUtils
-from ptl.utils.pbs_dshutils import DshUtils, PtlUtilError
-from ptl.utils.pbs_procutils import ProcUtils
-from ptl.utils.pbs_testusers import (ROOT_USER, TEST_USER, PbsUser,
-                                     DAEMON_SERVICE_USER)
+from ptl.utils.pbs_dshutils import DshUtils
 from ptl.lib.pbs_testlib import *
 
 
-from ptl.lib.pbsobject import *
-from ptl.lib.pbs_service import *
-from ptl.lib.pbs_error import *
-from ptl.lib.pbs_type import *
-from ptl.lib.batch_utils import *
-from ptl.lib.pbs_init_service import *
-from ptl.lib.ptl_exception import *
-from ptl.lib.expect_action import *
-try:
-    import psycopg2
-    PSYCOPG = True
-except:
-    PSYCOPG = False
-
-try:
-    from ptl.lib.pbs_ifl import *
-    API_OK = True
-except:
-    try:
-        from ptl.lib.pbs_ifl_mock import *
-    except:
-        sys.stderr.write("failed to import pbs_ifl, run pbs_swigify " +
-                         "to make it\n")
-        raise ImportError
-    API_OK = False
 class FairshareTree(object):
 
     """
@@ -313,4 +267,3 @@ class FairshareNode(object):
         if self.perc is not None:
             ret.append(str(self.perc))
         return "\t".join(ret)
-

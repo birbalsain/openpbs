@@ -40,36 +40,23 @@
 
 import ast
 import base64
-import collections
 import copy
 import datetime
-import grp
 import json
 import logging
 import os
-import pickle
-import pwd
-import random
 import re
 import socket
 import string
 import sys
-import tempfile
-import threading
 import time
 import traceback
-from collections import OrderedDict
-from distutils.version import LooseVersion
-from operator import itemgetter
 
-from ptl.lib.pbs_api_to_cli import api_to_cli
-from ptl.utils.pbs_cliutils import CliUtils
-from ptl.utils.pbs_dshutils import DshUtils, PtlUtilError
+from ptl.utils.pbs_dshutils import DshUtils
 from ptl.utils.pbs_procutils import ProcUtils
 from ptl.utils.pbs_testusers import (ROOT_USER, TEST_USER, PbsUser,
                                      DAEMON_SERVICE_USER)
-from ptl.lib.pbs_testlib import *
-from ptl.lib.pbsobject import *
+
 try:
     import psycopg2
     PSYCOPG = True
@@ -88,11 +75,399 @@ except:
         raise ImportError
     API_OK = False
 
+from ptl.lib.pbs_testlib import *
+from ptl.lib.ptl_object import *
+
+class PBSInitServices(object):
+    """
+    PBS initialization services
+
+    :param hostname: Machine hostname
+    :type hostname: str or None
+    :param conf: PBS configuaration file
+    :type conf: str or None
+    """
+
+    def __init__(self, hostname=None, conf=None):
+        self.logger = logging.getLogger(__name__)
+        self.hostname = hostname
+        if self.hostname is None:
+            self.hostname = socket.gethostname()
+        self.dflt_conf_file = os.environ.get('PBS_CONF_FILE', '/etc/pbs.conf')
+        self.conf_file = conf
+        self.du = DshUtils()
+        self.is_linux = sys.platform.startswith('linux')
+
+    def initd(self, hostname=None, op='status', conf_file=None,
+              init_script=None, daemon='all'):
+        """
+        Run the init script for a given operation
+
+        :param hostname: hostname on which to execute the init script
+        :type hostname: str or None
+        :param op: one of status, start, stop, restart
+        :type op: str
+        :param conf_file: optional path to a configuration file
+        :type conf_file: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        :param daemon: name of daemon to operate on. one of server, mom,
+                       sched, comm or all
+        :type daemon: str
+        """
+        if hostname is None:
+            hostname = self.hostname
+        if conf_file is None:
+            conf_file = self.conf_file
+        return self._unix_initd(hostname, op, conf_file, init_script, daemon)
+
+    def restart(self, hostname=None, init_script=None):
+        """
+        Run the init script for a restart operation
+
+        :param hostname: hostname on which to execute the init script
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='restart', init_script=init_script)
+
+    def restart_server(self, hostname=None, init_script=None):
+        """
+        Run the init script for a restart server
+
+        :param hostname: hostname on which to restart server
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='restart', init_script=init_script,
+                          daemon='server')
+
+    def restart_mom(self, hostname=None, init_script=None):
+        """
+        Run the init script for a restart mom
+
+        :param hostname: hostname on which to restart mom
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='restart', init_script=init_script,
+                          daemon='mom')
+
+    def restart_sched(self, hostname=None, init_script=None):
+        """
+        Run the init script for a restart sched
+
+        :param hostname: hostname on which to restart sched
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='restart', init_script=init_script,
+                          daemon='sched')
+
+    def restart_comm(self, hostname=None, init_script=None):
+        """
+        Run the init script for a restart comm
+
+        :param hostname: hostname on which to restart comm
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='restart', init_script=init_script,
+                          daemon='comm')
+
+    def start(self, hostname=None, init_script=None):
+        """
+        Run the init script for a start operation
+
+        :param hostname: hostname on which to execute the init script
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='start', init_script=init_script)
+
+    def start_server(self, hostname=None, init_script=None):
+        """
+        Run the init script for a start server
+
+        :param hostname: hostname on which to start server
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='start', init_script=init_script,
+                          daemon='server')
+
+    def start_mom(self, hostname=None, init_script=None):
+        """
+        Run the init script for a start mom
+
+        :param hostname: hostname on which to start mom
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='start', init_script=init_script,
+                          daemon='mom')
+
+    def start_sched(self, hostname=None, init_script=None):
+        """
+        Run the init script for a start sched
+
+        :param hostname: hostname on which to start sched
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='start', init_script=init_script,
+                          daemon='sched')
+
+    def start_comm(self, hostname=None, init_script=None):
+        """
+        Run the init script for a start comm
+
+        :param hostname: hostname on which to start comm
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='start', init_script=init_script,
+                          daemon='comm')
+
+    def stop(self, hostname=None, init_script=None):
+        """
+        Run the init script for a stop operation
+
+        :param hostname: hostname on which to execute the init script
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='stop', init_script=init_script)
+
+    def stop_server(self, hostname=None, init_script=None):
+        """
+        Run the init script for a stop server
+
+        :param hostname: hostname on which to stop server
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='stop', init_script=init_script,
+                          daemon='server')
+
+    def stop_mom(self, hostname=None, init_script=None):
+        """
+        Run the init script for a stop mom
+
+        :param hostname: hostname on which to stop mom
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='stop', init_script=init_script,
+                          daemon='mom')
+
+    def stop_sched(self, hostname=None, init_script=None):
+        """
+        Run the init script for a stop sched
+
+        :param hostname: hostname on which to stop sched
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='stop', init_script=init_script,
+                          daemon='sched')
+
+    def stop_comm(self, hostname=None, init_script=None):
+        """
+        Run the init script for a stop comm
+
+        :param hostname: hostname on which to stop comm
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='stop', init_script=init_script,
+                          daemon='comm')
+
+    def status(self, hostname=None, init_script=None):
+        """
+        Run the init script for a status operation
+
+        :param hostname: hostname on which to execute the init script
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='status', init_script=init_script)
+
+    def status_server(self, hostname=None, init_script=None):
+        """
+        Run the init script for a status server
+
+        :param hostname: hostname on which to status server
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='status', init_script=init_script,
+                          daemon='server')
+
+    def status_mom(self, hostname=None, init_script=None):
+        """
+        Run the init script for a status mom
+
+        :param hostname: hostname on which to status mom
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='status', init_script=init_script,
+                          daemon='mom')
+
+    def status_sched(self, hostname=None, init_script=None):
+        """
+        Run the init script for a status sched
+
+        :param hostname: hostname on which to status sched
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='status', init_script=init_script,
+                          daemon='sched')
+
+    def status_comm(self, hostname=None, init_script=None):
+        """
+        Run the init script for a status comm
+
+        :param hostname: hostname on which to status comm
+        :type hostname: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        """
+        return self.initd(hostname, op='status', init_script=init_script,
+                          daemon='comm')
+
+    def _unix_initd(self, hostname, op, conf_file, init_script, daemon):
+        """
+        Helper function for initd ``(*nix version)``
+
+        :param hostname: hostname on which init script should run
+        :type hostname: str
+        :param op: Operation on daemons - start, stop, restart or status
+        :op type: str
+        :param conf_file: Optional path to the pbs configuration file
+        :type conf_file: str or None
+        :param init_script: optional path to a PBS init script
+        :type init_script: str or None
+        :param daemon: name of daemon to operate on. one of server, mom,
+                       sched, comm or all
+        :type daemon: str
+        """
+        init_cmd = copy.copy(self.du.sudo_cmd)
+        if daemon is not None and daemon != 'all':
+            conf = self.du.parse_pbs_config(hostname, conf_file)
+            dconf = {
+                'PBS_START_SERVER': 0,
+                'PBS_START_MOM': 0,
+                'PBS_START_SCHED': 0,
+                'PBS_START_COMM': 0
+            }
+            if daemon == 'server' and conf.get('PBS_START_SERVER', 0) != 0:
+                dconf['PBS_START_SERVER'] = 1
+            elif daemon == 'mom' and conf.get('PBS_START_MOM', 0) != 0:
+                dconf['PBS_START_MOM'] = 1
+            elif daemon == 'sched' and conf.get('PBS_START_SCHED', 0) != 0:
+                dconf['PBS_START_SCHED'] = 1
+            elif daemon == 'comm' and conf.get('PBS_START_COMM', 0) != 0:
+                dconf['PBS_START_COMM'] = 1
+            for k, v in dconf.items():
+                init_cmd += ["%s=%s" % (k, str(v))]
+            _as = True
+        else:
+            fn = None
+            if (conf_file is not None) and (conf_file != self.dflt_conf_file):
+                init_cmd += ['PBS_CONF_FILE=' + conf_file]
+                _as = True
+            else:
+                _as = False
+            conf = self.du.parse_pbs_config(hostname, conf_file)
+        if (init_script is None) or (not init_script.startswith('/')):
+            if 'PBS_EXEC' not in conf:
+                msg = 'Missing PBS_EXEC setting in pbs config'
+                raise PbsInitServicesError(rc=1, rv=False, msg=msg)
+            if init_script is None:
+                init_script = os.path.join(conf['PBS_EXEC'], 'libexec',
+                                           'pbs_init.d')
+            else:
+                init_script = os.path.join(conf['PBS_EXEC'], 'etc',
+                                           init_script)
+            if not self.du.isfile(hostname, path=init_script, sudo=True):
+                # Could be Type 3 installation where we will not have
+                # PBS_EXEC/libexec/pbs_init.d
+                return []
+        init_cmd += [init_script, op]
+        msg = 'running init script to ' + op + ' pbs'
+        if daemon is not None and daemon != 'all':
+            msg += ' ' + daemon
+        msg += ' on ' + hostname
+        if conf_file is not None:
+            msg += ' using ' + conf_file
+        msg += ' init_cmd=%s' % (str(init_cmd))
+        self.logger.info(msg)
+        ret = self.du.run_cmd(hostname, init_cmd, as_script=_as,
+                              logerr=False)
+        if ret['rc'] != 0:
+            raise PbsInitServicesError(rc=ret['rc'], rv=False,
+                                       msg='\n'.join(ret['err']))
+        else:
+            return ret
+
+    def switch_version(self, hostname=None, version=None):
+        """
+        Switch to another version of PBS installed on the system
+
+        :param hostname: The hostname to operate on
+        :type hostname: str or None
+        :param version: version to switch
+        """
+        pbs_conf = self.du.parse_pbs_config(hostname)
+        if 'PBS_EXEC' in pbs_conf:
+            dn = os.path.dirname(pbs_conf['PBS_EXEC'])
+            newver = os.path.join(dn, version)
+            ret = self.du.isdir(hostname, path=newver)
+            if not ret:
+                msg = 'no version ' + version + ' on host ' + hostname
+                raise PbsInitServicesError(rc=0, rv=False, msg=msg)
+            self.stop(hostname)
+            dflt = os.path.join(dn, 'default')
+            ret = self.du.isfile(hostname, path=dflt)
+            if ret:
+                self.logger.info('removing symbolic link ' + dflt)
+                self.du.rm(hostname, dflt, sudo=True, logerr=False)
+                self.du.set_pbs_config(hostname, confs={'PBS_EXEC': dflt})
+            else:
+                self.du.set_pbs_config(hostname, confs={'PBS_EXEC': newver})
+
+            self.logger.info('linking ' + newver + ' to ' + dflt)
+            self.du.run_cmd(hostname, ['ln', '-s', newver, dflt],
+                            sudo=True, logerr=False)
+            self.start(hostname)
+
+
 class PBSService(PBSObject):
 
     """
     Generic PBS service object to hold properties of PBS daemons
-
     :param name: The name associated to the object
     :type name: str or None
     :param attrs: Dictionary of attributes to set on object
@@ -235,7 +610,6 @@ class PBSService(PBSObject):
     def init_logfile_path(self, conf=None):
         """
         Initialize path to log files for this service
-
         :param conf: PBS conf file parameters
         :type conf: Dictionary
         """
@@ -347,10 +721,8 @@ class PBSService(PBSObject):
         """
         Send signal ``sig`` to service. sig is the signal name
         as it would be sent to the program kill, e.g. -HUP.
-
         Return the ``out/err/rc`` from the command run to send
         the signal. See DshUtils.run_cmd
-
         :param inst: Instance
         :type inst: str
         :param procname: Process name
@@ -395,7 +767,6 @@ class PBSService(PBSObject):
         Get the ``PID`` associated to this instance.
         Implementation note, the pid is read from the
         daemon's lock file.
-
         This is different than _all_instance_pids in that
         the PID of the last running instance can be retrieved
         with ``_get_pid`` but not with ``_all_instance_pids``
@@ -430,7 +801,6 @@ class PBSService(PBSObject):
     def _start(self, inst=None, args=None, cmd_map=None, launcher=None):
         """
         Generic service startup
-
         :param inst: The instance to act upon
         :type inst: str
         :param args: Optional command-line arguments
@@ -543,7 +913,6 @@ class PBSService(PBSObject):
         Return the last ``<n>`` lines of a PBS log file, which
         can be one of ``server``, ``scheduler``, ``MoM``, or
         ``tracejob``
-
         :param logtype: The entity requested, an instance of a
                         Scheduler, Server or MoM object, or the
                         string 'tracejob' for tracejob
@@ -645,7 +1014,6 @@ class PBSService(PBSObject):
                    level=logging.INFO, existence=True):
         """
         Match given ``msg`` in given ``n`` lines of log file
-
         :param logtype: The entity requested, an instance of a
                         Scheduler, Server, or MoM object, or the
                         strings 'tracejob' for tracejob or
@@ -687,7 +1055,6 @@ class PBSService(PBSObject):
                         given msg, else check for non-existence of
                         given msg.
         :type existence: bool
-
         :return: (x,y) where x is the matching line
                  number and y the line itself. If allmatch is True,
                  a list of tuples is returned.
@@ -698,7 +1065,6 @@ class PBSService(PBSObject):
                 Or
                 When ``existence`` is False and given
                 ``msg`` found in ``n`` line.
-
         .. note:: The matching line number is relative to the record
                   number, not the absolute line number in the file.
         """
@@ -777,7 +1143,6 @@ class PBSService(PBSObject):
                          level=logging.INFO, existence=True):
         """
         Match given ``msg`` in given ``n`` lines of accounting log
-
         :param msg: log message to match, can be regex also when
                     ``regexp`` is True
         :type msg: str
@@ -814,7 +1179,6 @@ class PBSService(PBSObject):
                         given msg, else check for non-existence of
                         given msg.
         :type existence: bool
-
         :return: (x,y) where x is the matching line
                  number and y the line itself. If allmatch is True,
                  a list of tuples is returned.
@@ -825,7 +1189,6 @@ class PBSService(PBSObject):
                 Or
                 When ``existence`` is False and given
                 ``msg`` found in ``n`` line.
-
         .. note:: The matching line number is relative to the record
                   number, not the absolute line number in the file.
         """
@@ -839,7 +1202,6 @@ class PBSService(PBSObject):
                        level=logging.INFO, existence=True):
         """
         Match given ``msg`` in given ``n`` lines of tracejob log
-
         :param msg: log message to match, can be regex also when
                     ``regexp`` is True
         :type msg: str
@@ -875,7 +1237,6 @@ class PBSService(PBSObject):
                         given msg, else check for non-existence of
                         given msg.
         :type existence: bool
-
         :return: (x,y) where x is the matching line
                  number and y the line itself. If allmatch is True,
                  a list of tuples is returned.
@@ -886,7 +1247,6 @@ class PBSService(PBSObject):
                 Or
                 When ``existence`` is False and given
                 ``msg`` found in ``n`` line.
-
         .. note:: The matching line number is relative to the record
                   number, not the absolute line number in the file.
         """
@@ -904,7 +1264,6 @@ class PBSService(PBSObject):
     def _load_configuration(self, infile, objtype=None):
         """
         Load configuration as was saved in infile
-
         :param infile: the file in which configuration
                        was saved
         :type infile: str
@@ -1097,6 +1456,3 @@ class PBSService(PBSObject):
         for dyn_files in self.dyn_created_files:
             self.du.rm(path=dyn_files, sudo=True, force=True)
         self.dyn_created_files = []
-
-
-

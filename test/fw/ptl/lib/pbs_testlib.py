@@ -38,42 +38,16 @@
 # subject to Altair's trademark licensing policies.
 
 
-import ast
-import base64
-import collections
 import copy
 import datetime
-import grp
-import json
 import logging
 import os
-import pickle
-import pwd
 import random
 import re
-import socket
-import string
 import sys
-import tempfile
-import threading
 import time
-import traceback
-from collections import OrderedDict
-from distutils.version import LooseVersion
-from operator import itemgetter
 
-from ptl.lib.pbs_api_to_cli import api_to_cli
-from ptl.utils.pbs_cliutils import CliUtils
-from ptl.utils.pbs_dshutils import DshUtils, PtlUtilError
-from ptl.utils.pbs_procutils import ProcUtils
-from ptl.utils.pbs_testusers import (ROOT_USER, TEST_USER, PbsUser,
-                                     DAEMON_SERVICE_USER)
-
-try:
-    import psycopg2
-    PSYCOPG = True
-except:
-    PSYCOPG = False
+from ptl.utils.pbs_dshutils import DshUtils
 
 try:
     from ptl.lib.pbs_ifl import *
@@ -86,8 +60,6 @@ except:
                          "to make it\n")
         raise ImportError
     API_OK = False
-
-
 # suppress logging exceptions
 logging.raiseExceptions = False
 
@@ -226,17 +198,12 @@ CMD_ERROR_MAP = {
     'alterresv': 'PbsResvAlterError'
 }
 
-from ptl.lib.ptl_exception import *
-from ptl.lib.pbs_error import *
-from ptl.lib.expect_action import *
-from ptl.lib.batch_utils import *
-from ptl.lib.pbs_type import *
-from ptl.lib.pbsobject import *
-from ptl.lib.pbs_init_service import *
-from ptl.lib.pbs_service import PBSService
-
-
-
+from ptl.lib.ptl_error import *
+from ptl.lib.ptl_expect_action import *
+from ptl.lib.ptl_batchutils import *
+from ptl.lib.ptl_types import *
+from ptl.lib.ptl_object import *
+from ptl.lib.ptl_service import *
 
 
 class PtlConfig(object):
@@ -248,10 +215,8 @@ class PtlConfig(object):
     definitions in the file.By default, on Unix like systems, the file
     read is ``/etc/ptl.conf``, the environment variable ``PTL_CONF_FILE``
     can be used to set the path to the file to read.
-
     The format of the file is a series of ``<key> = <value>`` properties.
     A line that starts with a '#' is ignored and can be used for comments
-
     :param conf: Path to PTL configuration file
     :type conf: str or None
     """
@@ -324,7 +289,6 @@ class PtlConfig(object):
 class PbsAttribute(object):
     """
     Descriptor class for PBS attribute
-
     :param name: PBS attribute name
     :type name: str
     :param value: Value for the attribute
@@ -339,7 +303,6 @@ class PbsAttribute(object):
     def set_name(self, name):
         """
         Set PBS attribute name
-
         :param name: PBS attribute
         :type name: str
         """
@@ -354,7 +317,6 @@ class PbsAttribute(object):
     def set_value(self, value):
         """
         Set PBS attribute value
-
         :param value: Value of PBS attribute
         :type value: str or int or float
         """
@@ -401,10 +363,8 @@ class Entity(object):
     external relationship to the PBS system. For example, a
     user associated to an OS identifier (uid) maps to a PBS
     user entity.
-
     Entities may be subject to policies, such as limits, consume
     a certain amount of resource and/or fairshare usage.
-
     :param etype: Entity type
     :type etype: str or None
     :param name: Entity name
@@ -431,7 +391,6 @@ class Entity(object):
     def set_resource_usage(self, container=None, resource=None, usage=None):
         """
         Set the resource type
-
         :param resource: PBS resource
         :type resource: str or None
         :param usage: Resource usage value
@@ -450,7 +409,6 @@ class Entity(object):
     def set_fairshare_usage(self, usage=0):
         """
         Set fairshare usage
-
         :param usage: Fairshare usage value
         :type usage: int
         """
@@ -484,7 +442,6 @@ class Limit(Policy):
     (e.g., max_run_res.ncpus) associated to a given resource
     (e.g., resource), on a given entity (e.g.,user Bob) and
     have a certain value.
-
     :param limit_type: Type of the limit
     :type limit_type: str or None
     :param resource: PBS resource
@@ -508,7 +465,6 @@ class Limit(Policy):
     def set_container(self, container, container_id):
         """
         Set the container
-
         :param container: Container which is to be set
         :type container: str
         :param container_id: Container id
@@ -519,7 +475,6 @@ class Limit(Policy):
     def set_limit_type(self, t):
         """
         Set the limit type
-
         :param t: Limit type
         :type t: str
         """
@@ -532,7 +487,6 @@ class Limit(Policy):
     def set_resource(self, resource):
         """
         Set the resource
-
         :param resource: resource value to set
         :type resource: str
         """
@@ -541,7 +495,6 @@ class Limit(Policy):
     def set_value(self, value):
         """
         Set the resource value
-
         :param value: Resource value
         :type value: str
         """
@@ -559,106 +512,6 @@ class Limit(Policy):
         l = [self.container_id, self.limit_type, self.resource, '[',
              self.entity.type, ':', self.entity.name, '=', self.value, ']']
         return " ".join(l)
-
-
-class Holidays():
-    """
-    Descriptive calss for Holiday file.
-    """
-
-    def __init__(self):
-        self.year = {'id': "YEAR", 'value': None, 'valid': False}
-        self.weekday = {'id': "weekday", 'p': None, 'np': None, 'valid': None,
-                        'position': None}
-        self.monday = {'id': "monday", 'p': None, 'np': None, 'valid': None,
-                       'position': None}
-        self.tuesday = {'id': "tuesday", 'p': None, 'np': None, 'valid': None,
-                        'position': None}
-        self.wednesday = {'id': "wednesday", 'p': None, 'np': None,
-                          'valid': None, 'position': None}
-        self.thursday = {'id': "thursday", 'p': None, 'np': None,
-                         'valid': None, 'position': None}
-        self.friday = {'id': "friday", 'p': None, 'np': None, 'valid': None,
-                       'position': None}
-        self.saturday = {'id': "saturday", 'p': None, 'np': None,
-                         'valid': None, 'position': None}
-        self.sunday = {'id': "sunday", 'p': None, 'np': None, 'valid': None,
-                       'position': None}
-
-        self.days_set = []  # list of set days
-        self._days_map = {'weekday': self.weekday, 'monday': self.monday,
-                          'tuesday': self.tuesday, 'wednesday': self.wednesday,
-                          'thursday': self.thursday, 'friday': self.friday,
-                          'saturday': self.saturday, 'sunday': self.sunday}
-        self.holidays = []  # list of calendar holidays
-
-    def __str__(self):
-        """
-        Return the content to write to holidays file as a string
-        """
-        content = []
-        if self.year['valid']:
-            content.append(self.year['id'] + "\t" +
-                           self.year['value'])
-
-        for i in range(0, len(self.days_set)):
-            content.append(self.days_set[i]['id'] + "\t" +
-                           self.days_set[i]['p'] + "\t" +
-                           self.days_set[i]['np'])
-
-        # Add calendar holidays
-        for day in self.holidays:
-            content.append(day)
-
-        return "\n".join(content)
-
-class Resource(PBSObject):
-
-    """
-    PBS resource referenced by name, type and flag
-
-    :param name: Resource name
-    :type name: str or None
-    :param type: Type of resource
-    """
-
-    def __init__(self, name=None, type=None, flag=None):
-        PBSObject.__init__(self, name)
-        self.set_name(name)
-        self.set_type(type)
-        self.set_flag(flag)
-
-    def __del__(self):
-        del self.__dict__
-
-    def set_name(self, name):
-        """
-        Set the resource name
-        """
-        self.name = name
-        self.attributes['id'] = name
-
-    def set_type(self, type):
-        """
-        Set the resource type
-        """
-        self.type = type
-        self.attributes['type'] = type
-
-    def set_flag(self, flag):
-        """
-        Set the flag
-        """
-        self.flag = flag
-        self.attributes['flag'] = flag
-
-    def __str__(self):
-        s = [self.attributes['id']]
-        if 'type' in self.attributes:
-            s.append('type=' + self.attributes['type'])
-        if 'flag' in self.attributes:
-            s.append('flag=' + self.attributes['flag'])
-        return " ".join(s)
 
 
 class EquivClass(PBSObject):
@@ -680,7 +533,6 @@ class EquivClass(PBSObject):
     def add_entity(self, entity):
         """
         Add entities
-
         :param entity: Entity to add
         :type entity: str
         """
@@ -694,7 +546,6 @@ class EquivClass(PBSObject):
     def show(self, showobj=False):
         """
         Show the entities
-
         :param showobj: If true then show the entities
         :type showobj: bool
         """
@@ -706,700 +557,6 @@ class EquivClass(PBSObject):
         print(s)
         return s
 
-
-class ResourceResv(PBSObject):
-
-    """
-    Generic PBS resource reservation, i.e., job or
-    ``advance/standing`` reservation
-    """
-
-    def execvnode(self, attr='exec_vnode'):
-        """
-        PBS type execution vnode
-        """
-        if attr in self.attributes:
-            return PbsTypeExecVnode(self.attributes[attr])
-        else:
-            return None
-
-    def exechost(self):
-        """
-        PBS type execution host
-        """
-        if 'exec_host' in self.attributes:
-            return PbsTypeExecHost(self.attributes['exec_host'])
-        else:
-            return None
-
-    def resvnodes(self):
-        """
-        nodes assigned to a reservation
-        """
-        if 'resv_nodes' in self.attributes:
-            return self.attributes['resv_nodes']
-        else:
-            return None
-
-    def select(self):
-        if hasattr(self, '_select') and self._select is not None:
-            return self._select
-
-        if 'schedselect' in self.attributes:
-            self._select = PbsTypeSelect(self.attributes['schedselect'])
-
-        elif 'select' in self.attributes:
-            self._select = PbsTypeSelect(self.attributes['select'])
-        else:
-            return None
-
-        return self._select
-
-    @classmethod
-    def get_hosts(cls, exechost=None):
-        """
-        :returns: The hosts portion of the exec_host
-        """
-        hosts = []
-        exechosts = cls.utils.parse_exechost(exechost)
-        if exechosts:
-            for h in exechosts:
-                eh = list(h.keys())[0]
-                if eh not in hosts:
-                    hosts.append(eh)
-        return hosts
-
-    def get_vnodes(self, execvnode=None):
-        """
-        :returns: The unique vnode names of an execvnode as a list
-        """
-        if execvnode is None:
-            if 'exec_vnode' in self.attributes:
-                execvnode = self.attributes['exec_vnode']
-            elif 'resv_nodes' in self.attributes:
-                execvnode = self.attributes['resv_nodes']
-            else:
-                return []
-
-        vnodes = []
-        execvnodes = PbsTypeExecVnode(execvnode)
-        if execvnodes:
-            for n in execvnodes:
-                ev = list(n.keys())[0]
-                if ev not in vnodes:
-                    vnodes.append(ev)
-        return vnodes
-
-    def walltime(self, attr='Resource_List.walltime'):
-        if attr in self.attributes:
-            return self.utils.convert_duration(self.attributes[attr])
-
-
-class Job(ResourceResv):
-
-    """
-    PBS Job. Attributes and Resources
-
-    :param username: Job username
-    :type username: str or None
-    :param attrs: Job attributes
-    :type attrs: Dictionary
-    :param jobname: Name of the PBS job
-    :type jobname: str or None
-    """
-
-    dflt_attributes = {
-        ATTR_N: 'STDIN',
-        ATTR_j: 'n',
-        ATTR_m: 'a',
-        ATTR_p: '0',
-        ATTR_r: 'y',
-        ATTR_k: 'oe',
-    }
-    runtime = 100
-    du = DshUtils()
-
-    def __init__(self, username=TEST_USER, attrs={}, jobname=None):
-        self.platform = self.du.get_platform()
-        self.server = {}
-        self.script = None
-        self.script_body = None
-        if username is not None:
-            self.username = str(username)
-        else:
-            self.username = None
-        self.du = None
-        self.interactive_handle = None
-        if self.platform == 'cray' or self.platform == 'craysim':
-            if 'Resource_List.select' in attrs:
-                select = attrs['Resource_List.select']
-                attrs['Resource_List.select'] = self.add_cray_vntype(select)
-            elif 'Resource_List.vntype' not in attrs:
-                attrs['Resource_List.vntype'] = 'cray_compute'
-
-        PBSObject.__init__(self, None, attrs, self.dflt_attributes)
-
-        if jobname is not None:
-            self.custom_attrs[ATTR_N] = jobname
-            self.attributes[ATTR_N] = jobname
-        self.set_variable_list(self.username)
-        self.set_sleep_time(100)
-
-    def __del__(self):
-        del self.__dict__
-
-    def add_cray_vntype(self, select=None):
-        """
-        Cray specific function to add vntype as ``cray_compute`` to each
-        select chunk
-
-        :param select: PBS select statement
-        :type select: str or None
-        """
-        ra = []
-        r = select.split('+')
-        for i in r:
-            select = PbsTypeSelect(i)
-            novntype = 'vntype' not in select.resources
-            nohost = 'host' not in select.resources
-            novnode = 'vnode' not in select.resources
-            if novntype and nohost and novnode:
-                i = i + ":vntype=cray_compute"
-            ra.append(i)
-        select_str = ''
-        for l in ra:
-            select_str = select_str + "+" + l
-        select_str = select_str[1:]
-        return select_str
-
-    def set_attributes(self, a={}):
-        """
-        set attributes and custom attributes on this job.
-        custom attributes are used when converting attributes to CLI.
-        In case of Cray platform if 'Resource_List.vntype' is set
-        already then remove it and add vntype value to each chunk of a
-        select statement.
-
-        :param a: Attribute dictionary
-        :type a: Dictionary
-        """
-        if isinstance(a, list):
-            a = OrderedDict(a)
-
-        self.attributes = OrderedDict(list(self.dflt_attributes.items()) +
-                                      list(self.attributes.items()) +
-                                      list(a.items()))
-
-        if self.platform == 'cray' or self.platform == 'craysim':
-            s = 'Resource_List.select' in a
-            v = 'Resource_List.vntype' in self.custom_attrs
-            if s and v:
-                del self.custom_attrs['Resource_List.vntype']
-                select = a['Resource_List.select']
-                a['Resource_List.select'] = self.add_cray_vntype(select)
-
-        self.custom_attrs = OrderedDict(list(self.custom_attrs.items()) +
-                                        list(a.items()))
-
-    def set_variable_list(self, user=None, workdir=None):
-        """
-        Customize the ``Variable_List`` job attribute to ``<user>``
-        """
-        if user is None:
-            userinfo = pwd.getpwuid(os.getuid())
-            user = userinfo[0]
-            homedir = userinfo[5]
-        else:
-            try:
-                homedir = pwd.getpwnam(user)[5]
-            except:
-                homedir = ""
-
-        self.username = user
-
-        s = ['PBS_O_HOME=' + homedir]
-        s += ['PBS_O_LANG=en_US.UTF-8']
-        s += ['PBS_O_LOGNAME=' + user]
-        s += ['PBS_O_PATH=/usr/bin:/bin:/usr/bin:/usr/local/bin']
-        s += ['PBS_O_MAIL=/var/spool/mail/' + user]
-        s += ['PBS_O_SHELL=/bin/bash']
-        s += ['PBS_O_SYSTEM=Linux']
-        if workdir is not None:
-            wd = workdir
-        else:
-            wd = os.getcwd()
-        s += ['PBS_O_WORKDIR=' + str(wd)]
-
-        self.attributes[ATTR_v] = ",".join(s)
-        self.set_attributes()
-
-    def set_sleep_time(self, duration):
-        """
-        Set the sleep duration for this job.
-
-        :param duration: The duration, in seconds, to sleep
-        :type duration: int
-        """
-        self.set_execargs('/bin/sleep', duration)
-
-    def set_execargs(self, executable, arguments=None):
-        """
-        Set the executable and arguments to use for this job
-
-        :param executable: path to an executable. No checks are made.
-        :type executable: str
-        :param arguments: arguments to executable.
-        :type arguments: str or list or int
-        """
-        msg = ['job: executable set to ' + str(executable)]
-        if arguments is not None:
-            msg += [' with arguments: ' + str(arguments)]
-
-        self.logger.info("".join(msg))
-        self.attributes[ATTR_executable] = executable
-        if arguments is not None:
-            args = ''
-            xml_beginargs = '<jsdl-hpcpa:Argument>'
-            xml_endargs = '</jsdl-hpcpa:Argument>'
-            if isinstance(arguments, list):
-                for a in arguments:
-                    args += xml_beginargs + str(a) + xml_endargs
-            elif isinstance(arguments, str):
-                args = xml_beginargs + arguments + xml_endargs
-            elif isinstance(arguments, int):
-                args = xml_beginargs + str(arguments) + xml_endargs
-            self.attributes[ATTR_Arglist] = args
-        else:
-            self.unset_attributes([ATTR_Arglist])
-        self.set_attributes()
-
-    def create_script(self, body=None, asuser=None, hostname=None):
-        """
-        Create a job script from a given body of text into a
-        temporary location
-
-        :param body: the body of the script
-        :type body: str or None
-        :param asuser: Optionally the user to own this script,
-                      defaults ot current user
-        :type asuser: str or None
-        :param hostname: The host on which the job script is to
-                         be created
-        :type hostname: str or None
-        """
-
-        if body is None:
-            return None
-
-        if isinstance(body, list):
-            body = '\n'.join(body)
-
-        if self.platform == 'cray' or self.platform == 'craysim':
-            body = body.split("\n")
-            for i, line in enumerate(body):
-                if line.startswith("#PBS") and "select=" in line:
-                    if 'Resource_List.vntype' in self.attributes:
-                        self.unset_attributes(['Resource_List.vntype'])
-                    line_arr = line.split(" ")
-                    for j, element in enumerate(line_arr):
-                        select = element.startswith("select=")
-                        lselect = element.startswith("-lselect=")
-                        if select or lselect:
-                            if lselect:
-                                sel_str = element[9:]
-                            else:
-                                sel_str = element[7:]
-                            sel_str = self.add_cray_vntype(select=sel_str)
-                            if lselect:
-                                line_arr[j] = "-lselect=" + sel_str
-                            else:
-                                line_arr[j] = "select=" + sel_str
-                    body[i] = " ".join(line_arr)
-            body = '\n'.join(body)
-
-        # If the user has a userhost, the job will run from there
-        # so the script should be made there
-        if self.username:
-            user = PbsUser.get_user(self.username)
-            if user.host:
-                hostname = user.host
-                asuser = user.name
-
-        self.script_body = body
-        if self.du is None:
-            self.du = DshUtils()
-        # First create the temporary file as current user and only change
-        # its mode once the current user has written to it
-        fn = self.du.create_temp_file(hostname, prefix='PtlPbsJobScript',
-                                      asuser=asuser, body=body)
-        self.du.chmod(hostname, fn, mode=0o755)
-        self.script = fn
-        return fn
-
-    def create_subjob_id(self, job_array_id, subjob_index):
-        """
-        insert subjob index into the square brackets of job array id
-
-        :param job_array_id: PBS parent array job id
-        :type job_array_id: str
-        :param subjob_index: index of subjob
-        :type subjob_index: int
-        :returns: subjob id string
-        """
-        idx = job_array_id.find('[]')
-        return job_array_id[:idx + 1] + str(subjob_index) + \
-            job_array_id[idx + 1:]
-
-    def create_eatcpu_job(self, duration=None, hostname=None):
-        """
-        Create a job that eats cpu indefinitely or for the given
-        duration of time
-
-        :param duration: The duration, in seconds, to sleep
-        :type duration: int
-        :param hostname: hostname on which to execute the job
-        :type hostname: str or None
-        """
-        if self.du is None:
-            self.du = DshUtils()
-        shebang_line = '#!' + self.du.which(hostname, exe='python3')
-        body = """
-import signal
-import sys
-
-x = 0
-
-
-def receive_alarm(signum, stack):
-    sys.exit()
-
-signal.signal(signal.SIGALRM, receive_alarm)
-
-if (len(sys.argv) > 1):
-    input_time = sys.argv[1]
-    print('Terminating after %s seconds' % input_time)
-    signal.alarm(int(input_time))
-else:
-    print('Running indefinitely')
-
-while True:
-    x += 1
-"""
-        script_body = shebang_line + body
-        script_path = self.du.create_temp_file(hostname=hostname,
-                                               body=script_body,
-                                               suffix='.py')
-        if not self.du.is_localhost(hostname):
-            d = pwd.getpwnam(self.username).pw_dir
-            ret = self.du.run_copy(hosts=hostname, src=script_path, dest=d)
-            if ret is None or ret['rc'] != 0:
-                raise AssertionError("Failed to copy file %s to %s"
-                                     % (script_path, hostname))
-        pbs_conf = self.du.parse_pbs_config(hostname)
-        shell_path = os.path.join(pbs_conf['PBS_EXEC'],
-                                  'bin', 'pbs_python')
-        a = {ATTR_S: shell_path}
-        self.set_attributes(a)
-        mode = 0o755
-        if not self.du.chmod(hostname=hostname, path=script_path, mode=mode,
-                             sudo=True):
-            raise AssertionError("Failed to set permissions for file %s"
-                                 " to %s" % (script_path, oct(mode)))
-        self.set_execargs(script_path, duration)
-
-
-class InteractiveJob(threading.Thread):
-
-    """
-    An Interactive Job thread
-
-    Interactive Jobs are submitted as a thread that sets the jobid
-    as soon as it is returned by ``qsub -I``, such that the caller
-    can get back to monitoring the state of PBS while the interactive
-    session goes on in the thread.
-
-    The commands to be run within an interactive session are
-    specified in the job's interactive_script attribute as a list of
-    tuples, where the first item in each tuple is the command to run,
-    and the subsequent items are the expected returned data.
-
-    Implementation details:
-
-    Support for interactive jobs is currently done through the
-    pexpect module which must be installed separately from PTL.
-    Interactive jobs are submitted through ``CLI`` only, there is no
-    API support for this operation yet.
-
-    The submission of an interactive job requires passing in job
-    attributes,the command to execute ``(i.e. path to qsub -I)``
-    and the hostname
-
-    when not impersonating:
-
-    pexpect spawns the ``qsub -I`` command and expects a prompt
-    back, for each tuple in the interactive_script, it sends the
-    command and expects to match the return value.
-
-    when impersonating:
-
-    pexpect spawns ``sudo -u <user> qsub -I``. The rest is as
-    described in non- impersonating mode.
-    """
-
-    logger = logging.getLogger(__name__)
-
-    pexpect_timeout = 15
-    pexpect_sleep_time = .1
-    du = DshUtils()
-
-    def __init__(self, job, cmd, host):
-        threading.Thread.__init__(self)
-        self.job = job
-        self.cmd = cmd
-        self.jobid = None
-        self.hostname = host
-        self._ru = ""
-        if self.du.get_platform() == "shasta":
-            self._ru = PbsUser.get_user(job.username)
-            if self._ru.host:
-                self.hostname = self._ru.host
-
-    def __del__(self):
-        del self.__dict__
-
-    def run(self):
-        """
-        Run the interactive job
-        """
-        try:
-            import pexpect
-        except:
-            self.logger.error('pexpect module is required for '
-                              'interactive jobs')
-            return None
-
-        job = self.job
-        cmd = self.cmd
-
-        self.jobid = None
-        self.logger.info("submit interactive job as " + job.username +
-                         ": " + " ".join(cmd))
-        if not hasattr(job, 'interactive_script'):
-            self.logger.debug('no interactive_script attribute on job')
-            return None
-
-        try:
-            # sleep to allow server to communicate with client
-            # this value is set empirically so tweaking may be
-            # needed
-            _st = self.pexpect_sleep_time
-            _to = self.pexpect_timeout
-            _sc = job.interactive_script
-            current_user = pwd.getpwuid(os.getuid())[0]
-            if current_user != job.username:
-                if hasattr(job, 'preserve_env') and job.preserve_env is True:
-                    cmd = (copy.copy(self.du.sudo_cmd) +
-                           ['-E', '-u', job.username] + cmd)
-                else:
-                    cmd = (copy.copy(self.du.sudo_cmd) +
-                           ['-u', job.username] + cmd)
-
-            self.logger.debug(cmd)
-            is_local = self.du.is_localhost(self.hostname)
-            _p = ""
-            if is_local:
-                _p = pexpect.spawn(" ".join(cmd), timeout=_to)
-            else:
-                self.logger.info("Submit interactive job from a remote host")
-                if self.du.get_platform() == "shasta":
-                    ssh_cmd = self.du.rsh_cmd + \
-                        ['-p', self._ru.port,
-                         self._ru.name + '@' + self.hostname]
-                    _p = pexpect.spawn(" ".join(ssh_cmd), timeout=_to)
-                    _p.sendline(" ".join(self.cmd))
-                else:
-                    ssh_cmd = self.du.rsh_cmd + [self.hostname]
-                    _p = pexpect.spawn(" ".join(ssh_cmd), timeout=_to)
-                    _p.sendline(" ".join(cmd))
-            self.job.interactive_handle = _p
-            time.sleep(_st)
-            expstr = "qsub: waiting for job "
-            expstr += r"(?P<jobid>\d+.[0-9A-Za-z-.]+) to start"
-            _p.expect(expstr)
-            if _p.match:
-                self.jobid = _p.match.group('jobid').decode()
-            else:
-                _p.close()
-                self.job.interactive_handle = None
-                return None
-            self.logger.debug(_p.after.decode())
-            for _l in _sc:
-                (cmd, out) = _l
-                self.logger.info('sending: ' + cmd)
-                _p.sendline(cmd)
-                self.logger.info('expecting: ' + out)
-                _p.expect(out)
-            self.logger.info('sending exit')
-            _p.sendline("exit")
-            while True:
-                try:
-                    _p.read_nonblocking(timeout=5)
-                except Exception:
-                    break
-            if _p.isalive():
-                _p.close()
-            self.job.interactive_handle = None
-        except Exception:
-            self.logger.error(traceback.print_exc())
-            return None
-        return self.jobid
-
-
-class Reservation(ResourceResv):
-
-    """
-    PBS Reservation. Attributes and Resources
-
-    :param attrs: Reservation attributes
-    :type attrs: Dictionary
-    :param hosts: List of hosts for maintenance
-    :type hosts: List
-    """
-
-    dflt_attributes = {}
-
-    def __init__(self, username=TEST_USER, attrs=None, hosts=None):
-        self.server = {}
-        self.script = None
-
-        if attrs:
-            self.attributes = attrs
-        else:
-            self.attributes = {}
-
-        if hosts:
-            self.hosts = hosts
-        else:
-            self.hosts = []
-
-        if username is None:
-            userinfo = pwd.getpwuid(os.getuid())
-            self.username = userinfo[0]
-        else:
-            self.username = str(username)
-
-        # These are not in dflt_attributes because of the conversion to CLI
-        # options is done strictly
-        if ATTR_resv_start not in self.attributes and \
-           ATTR_job not in self.attributes:
-            self.attributes[ATTR_resv_start] = str(int(time.time()) +
-                                                   36 * 3600)
-
-        if ATTR_resv_end not in self.attributes and \
-           ATTR_job not in self.attributes:
-            if ATTR_resv_duration not in self.attributes:
-                self.attributes[ATTR_resv_end] = str(int(time.time()) +
-                                                     72 * 3600)
-
-        PBSObject.__init__(self, None, self.attributes, self.dflt_attributes)
-        self.set_attributes()
-
-    def __del__(self):
-        del self.__dict__
-
-    def set_variable_list(self, user, workdir=None):
-        pass
-
-
-class Queue(PBSObject):
-
-    """
-    PBS Queue container, holds attributes of the queue and
-    pointer to server
-
-    :param name: Queue name
-    :type name: str or None
-    :param attrs: Queue attributes
-    :type attrs: Dictionary
-    """
-
-    dflt_attributes = {}
-
-    def __init__(self, name=None, attrs={}, server=None):
-        PBSObject.__init__(self, name, attrs, self.dflt_attributes)
-
-        self.server = server
-        m = ['queue']
-        if server is not None:
-            m += ['@' + server.shortname]
-        if self.name is not None:
-            m += [' ', self.name]
-        m += [': ']
-        self.logprefix = "".join(m)
-
-    def __del__(self):
-        del self.__dict__
-
-    def revert_to_defaults(self):
-        """
-        reset queue attributes to defaults
-        """
-
-        ignore_attrs = ['id', ATTR_count, ATTR_rescassn]
-        ignore_attrs += [ATTR_qtype, ATTR_enable, ATTR_start, ATTR_total]
-        ignore_attrs += ['THE_END']
-
-        len_attrs = len(ignore_attrs)
-        unsetlist = []
-        setdict = {}
-
-        self.logger.info(
-            self.logprefix +
-            "reverting configuration to defaults")
-        if self.server is not None:
-            self.server.status(QUEUE, id=self.name, level=logging.DEBUG)
-
-        for k in self.attributes.keys():
-            for i in range(len_attrs):
-                if k.startswith(ignore_attrs[i]):
-                    break
-            if (i == (len_attrs - 1)) and k not in self.dflt_attributes:
-                unsetlist.append(k)
-
-        if len(unsetlist) != 0 and self.server is not None:
-            try:
-                self.server.manager(MGR_CMD_UNSET, MGR_OBJ_QUEUE, unsetlist,
-                                    self.name)
-            except PbsManagerError as e:
-                self.logger.error(e.msg)
-
-        for k in self.dflt_attributes.keys():
-            if (k not in self.attributes or
-                    self.attributes[k] != self.dflt_attributes[k]):
-                setdict[k] = self.dflt_attributes[k]
-
-        if len(setdict.keys()) != 0 and self.server is not None:
-            self.server.manager(MGR_CMD_SET, MGR_OBJ_QUEUE, setdict)
-
-
-class Hook(PBSObject):
-
-    """
-    PBS hook objects. Holds attributes information and pointer
-    to server
-
-    :param name: Hook name
-    :type name: str or None
-    :param attrs: Hook attributes
-    :type attrs: Dictionary
-    :param server: Pointer to server
-    """
-
-    dflt_attributes = {}
-
-    def __init__(self, name=None, attrs={}, server=None):
-        PBSObject.__init__(self, name, attrs, self.dflt_attributes)
-        self.server = server
 
 class Holidays():
     """
@@ -1451,6 +608,3 @@ class Holidays():
             content.append(day)
 
         return "\n".join(content)
-
-
-

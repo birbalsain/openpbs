@@ -38,13 +38,15 @@
 # subject to Altair's trademark licensing policies.
 
 
+
 import datetime
 import os
 import re
 import sys
 import time
 
-from ptl.lib.batch_utils import *
+from ptl.lib.ptl_batchutils import get_batchutils_obj 
+
 
 class PbsTypeSize(str):
 
@@ -363,20 +365,6 @@ class PbsTypeVariableList(PbsTypeList):
 
     def __init__(self, value=None):
         super(PbsTypeVariableList, self).__init__(value, sep=',', kvsep='=')
-
-
-class PbsTypeAttribute(dict):
-
-    """
-    Experimental. This is a placeholder object that will be used
-    in the future to map attribute information and circumvent
-    the error-pron dynamic type detection that is currently done
-    using ``decode_value()``
-    """
-
-    def __getitem__(self, name):
-        return BatchUtils.decode_value(super(PbsTypeAttribute,
-                                             self).__getitem__(name))
 
 
 class PbsTypeSelect(list):
@@ -704,3 +692,66 @@ class PbsTypeJobId(str):
 
     def __str__(self):
         return str(self.value)
+
+
+class PbsTypeFGCLimit(object):
+
+    """
+    FGC limit entry, of the form:
+    ``<limtype>[.<resource>]=\[<entity_type>:<entity_name>=
+    <entity_value>\]``
+    :param attr: FGC limit attribute
+    :type attr: str
+    :param value: Value of attribute
+    :type value: int
+    :returns: FGC limit entry of given format
+    """
+
+    fgc_attr_pat = re.compile(r"(?P<ltype>[a-z_]+)[\.]*(?P<resource>[\w\d-]*)")
+    fgc_val_pat = re.compile(r"[\s]*\[(?P<etype>[ugpo]):(?P<ename>[\w\d-]+)"
+                             r"=(?P<eval>[\d]+)\][\s]*")
+    utils = get_batchutils_obj
+
+    def __init__(self, attr, val):
+
+        self.attr = attr
+        self.val = val
+
+        a = self.fgc_attr_pat.match(attr)
+        if a:
+            self.limit_type = a.group('ltype')
+            self.resource_name = a.group('resource')
+        else:
+            self.limit_type = None
+            self.resource_name = None
+
+        v = self.fgc_val_pat.match(val)
+        if v:
+            self.lim_value = self.utils.decode_value(v.group('eval'))
+            self.entity_type = v.group('etype')
+            self.entity_name = v.group('ename')
+        else:
+            self.lim_value = None
+            self.entity_type = None
+            self.entity_name = None
+
+    def __val__(self):
+        return ('[' + str(self.entity_type) + ':' +
+                str(self.entity_name) + '=' + str(self.lim_value) + ']')
+
+    def __str__(self):
+        return (self.attr + ' = ' + self.__val__())
+
+
+class PbsTypeAttribute(dict):
+
+    """
+    Experimental. This is a placeholder object that will be used
+    in the future to map attribute information and circumvent
+    the error-pron dynamic type detection that is currently done
+    using ``decode_value()``
+    """
+
+    def __getitem__(self, name):
+        return get_batchutils_obj.decode_value(super(PbsTypeAttribute,
+                                             self).__getitem__(name))
