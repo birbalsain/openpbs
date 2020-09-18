@@ -40,6 +40,8 @@
 
 import re
 from ptl.utils.pbs_dshutils import DshUtils
+from ptl.utils.plugins.ptl_test_runner import PtlTextTestRunner
+import datetime
 
 
 class PTLJsonData(object):
@@ -47,6 +49,7 @@ class PTLJsonData(object):
     The intent of the class is to generate json format of PTL test data
     """
 
+    cur_repeat_count = 1
     def __init__(self, command):
         self.__du = DshUtils()
         self.__cmd = command
@@ -63,8 +66,12 @@ class PTLJsonData(object):
 
         :returns a formatted dictionary of the data
         """
+        FMT = '%H:%M:%S.%f'
+        run_count = "Tests_run_count: " + str(PtlTextTestRunner.cur_repeat_count)
         data_json = None
         if not prev_data:
+            PTLJsonData.cur_repeat_count = 1
+            tests_start = str(data['start_time']).split()[1]
             data_json = {
                 'command': self.__cmd,
                 'user': self.__du.get_current_user(),
@@ -74,20 +81,29 @@ class PTLJsonData(object):
                 'machine_info': data['machinfo'],
                 'testsuites': {},
                 'additional_data': {},
-                'test_summary': {
-                    'result_summary': {
-                        'run': 0,
-                        'succeeded': 0,
-                        'failed': 0,
-                        'errors': 0,
-                        'skipped': 0,
-                        'timedout': 0
-                    },
-                    'test_start_time': str(data['start_time']),
+                'test_summary': {},
+                'avg_measurements': {},
+                'result' : {
                     'tests_with_failures': [],
-                    'test_suites_with_failures': []
+                    'test_suites_with_failures': [],
+                    'start' : str(data['start_time'])
                 }
+
             }
+            test_summary = {
+                'result_summary': {
+                    'run': 0,
+                    'succeeded': 0,
+                    'failed': 0,
+                    'errors': 0,
+                    'skipped': 0,
+                    'timedout': 0
+                },
+                'test_start_time': str(data['start_time']),
+                'tests_with_failures': [],
+                'test_suites_with_failures': []
+            }
+            data_json['test_summary'][run_count] = test_summary
             if data['testparam']:
                 for param in data['testparam'].split(','):
                     if '=' in param:
@@ -97,26 +113,29 @@ class PTLJsonData(object):
                         data_json['test_conf'][param] = True
         else:
             data_json = prev_data
+        print("****outside", PTLJsonData.cur_repeat_count, "   ", PtlTextTestRunner.cur_repeat_count)
+        if PTLJsonData.cur_repeat_count != PtlTextTestRunner.cur_repeat_count:
+            print("**** inside repeat_changes  ")
+            test_summary = {
+                'result_summary': {
+                    'run': 0,
+                    'succeeded': 0,
+                    'failed': 0,
+                    'errors': 0,
+                    'skipped': 0,
+                    'timedout': 0
+                },
+                'test_start_time': str(data['start_time']),
+                'tests_with_failures': [],
+                'test_suites_with_failures': []
+            }
+            data_json['test_summary'][run_count] = test_summary
+            PTLJsonData.cur_repeat_count = PtlTextTestRunner.cur_repeat_count
+        print("**** count ", PTLJsonData.cur_repeat_count) 
         tsname = data['suite']
         tcname = data['testcase']
-        if tsname not in data_json['testsuites']:
-            data_json['testsuites'][tsname] = {
-                'module': data['module'],
-                'file': data['file'],
-                'testcases': {}
-            }
-        tsdoc = []
-        if data['suitedoc']:
-            tsdoc = (re.sub(r"[\t\n ]+", " ", data['suitedoc'])).strip()
-        data_json['testsuites'][tsname]['docstring'] = tsdoc
-        tcshort = {}
-        tcdoc = []
-        if data['testdoc']:
-            tcdoc = (re.sub(r"[\t\n ]+", " ", data['testdoc'])).strip()
-        tcshort['docstring'] = tcdoc
-        if data['tags']:
-            tcshort['tags'] = data['tags']
-        tcshort['results'] = {
+        jdata = {}
+        jdata[run_count] = {
             'status': data['status'],
             'status_data': str(data['status_data']),
             'duration': str(data['duration']),
@@ -124,15 +143,42 @@ class PTLJsonData(object):
             'end_time': str(data['end_time']),
             'measurements': []
         }
-        tcshort['requirements'] = data['requirements']
         if 'measurements' in data:
-            tcshort['results']['measurements'] = data['measurements']
-        data_json['testsuites'][tsname]['testcases'][tcname] = tcshort
+            jdata[run_count]['measurements'] = data['measurements']
+        if PtlTextTestRunner.cur_repeat_count == 1:
+            if tsname not in data_json['testsuites']:
+                data_json['testsuites'][tsname] = {
+                    'module': data['module'],
+                    'file': data['file'],
+                    'testcases': {}
+                }
+            tsdoc = []
+            if data['suitedoc']:
+                tsdoc = (re.sub(r"[\t\n ]+", " ", data['suitedoc'])).strip()
+            data_json['testsuites'][tsname]['docstring'] = tsdoc
+            tcdoc = []
+            if data['testdoc']:
+                tcdoc = (re.sub(r"[\t\n ]+", " ", data['testdoc'])).strip()
+            data_json['testsuites'][tsname]['testcases'][tcname] = {
+                'docstring' : tcdoc,
+                'requirements' : data['requirements'],
+                'results' : {}
+            }
+            if data['testdoc']:
+                data_json['testsuites'][tsname]['testcases'][tcname]['tags'] = data['tags']
+        data_json['testsuites'][tsname]['testcases'][tcname]['results'][run_count] = jdata[run_count]
         if 'additional_data' in data:
             data_json['additional_data'] = data['additional_data']
-        data_json['test_summary']['test_end_time'] = str(data['end_time'])
-        data_json['test_summary']['result_summary']['run'] += 1
-        d_ts = data_json['test_summary']
+        data_json['test_summary'][run_count]['test_end_time'] = str(data['end_time'])
+        start = data_json['test_summary'][run_count]['test_start_time'].split()[1]
+        end = str(data['end_time']).split()[1]
+        dur = str(datetime.datetime.strptime(end, FMT) -
+                  datetime.datetime.strptime(start, FMT))
+        data_json['test_summary'][run_count]['tests_duration'] = dur
+        print("@@@@@@@@@@@@@@   summary  run is ", data_json['test_summary'][run_count]['result_summary']['run'])
+        data_json['test_summary'][run_count]['result_summary']['run'] += 1
+        print("@@@@@@@@@@@@@@   summary  run is ", data_json['test_summary'][run_count]['result_summary']['run'])
+        d_ts = data_json['test_summary'][run_count]
         if data['status'] == 'PASS':
             d_ts['result_summary']['succeeded'] += 1
         elif data['status'] == 'SKIP':
@@ -152,4 +198,75 @@ class PTLJsonData(object):
             d_ts['tests_with_failures'].append(data['testcase'])
             if data['suite'] not in d_ts['test_suites_with_failures']:
                 d_ts['test_suites_with_failures'].append(data['suite'])
+        measurement_sum = {
+            'avg_measurements':{
+                'testsuites': {}}}
+        for tsname in data_json['testsuites']:
+            measurement_sum['avg_measurements']['testsuites'][tsname] = {}
+            measurement_sum['avg_measurements']['testsuites'][tsname]['testcases'] = {}
+            for tcname in data_json['testsuites'][tsname]['testcases']:
+                measurement_sum['avg_measurements']['testsuites'][tsname]['testcases'][tcname] = []                
+                t_sum = []
+                count = 0
+                for key in data_json['testsuites'][tsname]['testcases'][tcname]['results'].keys():
+                    count += 1
+                    repeat_count = 'Tests_run_count: ' + str(count)
+                    print("************** for measuements", tsname,"   test case name ", tcname)
+                    m = data_json['testsuites'][tsname]['testcases'][tcname]['results'][repeat_count]['measurements']
+                    m_sum = []
+                    for i in range(len(m)):
+                        sum_m = 0
+                        sum_d = 0
+                        sum_min = 0
+                        sum_max = 0
+                        record = []
+                        if count != 1:
+                            sum_m =  m[i]["test_data"]['mean'] + t_sum[i][0]
+                            sum_d =  m[i]["test_data"]['std_dev'] + t_sum[i][1]
+                            sum_min = m[i]["test_data"]['minimum'] + t_sum[i][2]
+                            sum_max = m[i]["test_data"]['maximum'] + t_sum[i][3]
+                            record = [sum_m, sum_d, sum_min, sum_max]
+                        else:
+                            sum_m = m[i]["test_data"]['mean']
+                            sum_d = m[i]["test_data"]['std_dev']
+                            sum_min = m[i]["test_data"]['minimum']
+                            sum_max = m[i]["test_data"]['maximum']
+                            record = [sum_m, sum_d, sum_min, sum_max]
+                        print("**** each data  ", record)
+                        m_sum.append(record)
+                        print("*** m_sum is testcase data ", m_sum)
+                    t_sum = m_sum
+                    print("**** total sum  ", t_sum)
+                measurement_list = []
+                print("*****  total sum ", t_sum)
+                for i in range(len(m)):
+                    m_data={}
+                    m_data['test_measure']=m[i]['test_measure']
+                    m_data['unit']=m[i]['unit']
+                    m_data['test_data']=m[i]['test_data']
+                    m_data['test_data']['mean']=t_sum[i][0]/count
+                    m_data['test_data']['std_dev']=t_sum[i][1]/count
+                    m_data['test_data']['minimum']=t_sum[i][2]/count
+                    m_data['test_data']['maximum']=t_sum[i][3]/count
+                    measurement_list.append(m_data)
+                measurement_sum['avg_measurements']['testsuites'][tsname]['testcases'][tcname] = measurement_list
+                print("*************   measurement_list ",measurement_sum['avg_measurements']['testsuites'][tsname]['testcases'][tcname])
+        data_json["avg_measurements"] = measurement_sum['avg_measurements']     
+               
+        data_json['result']['end'] = str(data['end_time'])
+        start = data_json['result']['start'].split()[1]
+        end = data_json['result']['end'].split()[1]
+        dur = str(datetime.datetime.strptime(end, FMT) -
+                  datetime.datetime.strptime(start, FMT))
+        fail_tests = []
+        fail_ts = []
+        for count in range(PtlTextTestRunner.cur_repeat_count):
+           repeat_count = 'Tests_run_count: ' + str(count + 1)
+           fail_tests.extend(data_json['test_summary'][repeat_count]['tests_with_failures'])
+           fail_ts.extend(data_json['test_summary'][repeat_count]['test_suites_with_failures'])
+        fail_tests = fail_tests
+        fail_ts = fail_ts
+        data_json['result']['duration'] = dur
+        data_json['result']['tests_with_failures'] = list(set(fail_tests))
+        data_json['result']['test_suites_with_failures'] = list(set(fail_ts))
         return data_json
