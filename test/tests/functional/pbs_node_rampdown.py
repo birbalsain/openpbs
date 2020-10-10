@@ -599,9 +599,9 @@ return i\\n return fib(i-1) + fib(i-2)\\n\\nprint(fib(400))\\\")"'
         self.stime = time.time()
 
     def tearDown(self):
-        self.momA.signal("-CONT")
-        self.momB.signal("-CONT")
-        self.momC.signal("-CONT")
+        self.momA.signal(self.momA, "-CONT")
+        self.momB.signal(self.momB, "-CONT")
+        self.momC.signal(self.momC, "-CONT")
         for host in [self.hostA, self.hostB, self.hostC]:
             test_img = os.path.join("/home", "pbsuser", "test.img")
             self.du.rm(hostname=host, path=test_img, force=True,
@@ -5158,7 +5158,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.match_vnode_status([self.n0, self.n8, self.n9, self.n10], 'free')
 
         # temporarily suspend momC, prevents from operating on released nodes
-        self.momC.signal("-STOP")
+        self.momC.signal(self.momC, "-STOP")
 
         # Run pbs_release_nodes on nodes belonging to momB and momC
         cmd = [self.pbs_release_nodes_cmd, '-j', jid,
@@ -5303,7 +5303,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
                            id="workq")
 
         # resume momC
-        self.momC.signal("-CONT")
+        self.momC.signal(self.momC, "-CONT")
 
         # With momC resumed, it now receives DELETE_JOB2 request from
         # MS
@@ -5415,7 +5415,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.match_vnode_status([self.n0, self.n8, self.n9, self.n10], 'free')
 
         # temporarily suspend momC, prevents from operating on released nodes
-        self.momC.signal("-STOP")
+        self.momC.signal(self.momC, "-STOP")
 
         # Run pbs_release_nodes on nodes belonging to momB and momC
         cmd = [self.pbs_release_nodes_cmd, '-j', jid,
@@ -5506,9 +5506,9 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.server.set_op_mode(PTL_CLI)
         self.server.qterm(manner="quick")
         self.server.set_op_mode(om)
-        self.assertFalse(self.server.isUp())
+        self.assertFalse(self.server.isUp(self.server))
         self.server.start()
-        self.assertTrue(self.server.isUp())
+        self.assertTrue(self.server.isUp(self.server))
 
         # Job should have the same state as before
         self.server.expect(JOB, {'job_state': 'R',
@@ -5544,7 +5544,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
                            id="workq")
 
         # resume momC
-        self.momC.signal("-CONT")
+        self.momC.signal(self.momC, "-CONT")
 
         # With momC resumed, it now receives DELETE_JOB2 request from
         # MS
@@ -5612,7 +5612,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.match_vnode_status([self.n0, self.n8, self.n9, self.n10], 'free')
 
         # temporarily suspend momC, prevents from operating on released nodes
-        self.momC.signal("-STOP")
+        self.momC.signal(self.momC, "-STOP")
 
         # Run pbs_release_nodes on nodes belonging to momB and momC
         cmd = [self.pbs_release_nodes_cmd, '-j', jid,
@@ -5703,15 +5703,15 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.server.set_op_mode(PTL_CLI)
         self.server.qterm(manner="immediate")
         self.server.set_op_mode(om)
-        self.assertFalse(self.server.isUp())
+        self.assertFalse(self.server.isUp(self.server))
 
         # resume momC, but this is a stale request (nothing happens)
         # since server is down.
-        self.momC.signal("-CONT")
+        self.momC.signal(self.momC, "-CONT")
 
         # start the server again
         self.server.start()
-        self.assertTrue(self.server.isUp())
+        self.assertTrue(self.server.isUp(self.server))
 
         # make sure job is now running after server restart
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
@@ -5780,7 +5780,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.match_vnode_status([self.n0, self.n8, self.n9, self.n10], 'free')
 
         # temporarily suspend momC, prevents from operating on released nodes
-        self.momC.signal("-STOP")
+        self.momC.signal(self.momC, "-STOP")
 
         # Run pbs_release_nodes on nodes belonging to momB and momC
         cmd = [self.pbs_release_nodes_cmd, '-j', jid,
@@ -5875,9 +5875,9 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.server.set_op_mode(PTL_CLI)
         self.server.qterm(manner="quick")
         self.server.set_op_mode(om)
-        self.assertFalse(self.server.isUp())
+        self.assertFalse(self.server.isUp(self.server))
         self.server.start()
-        self.assertTrue(self.server.isUp())
+        self.assertTrue(self.server.isUp(self.server))
 
         # Job should have the same state as before
         self.server.expect(JOB, {'job_state': 'R',
@@ -5913,7 +5913,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
                            id="workq")
 
         # resume momC
-        self.momC.signal("-CONT")
+        self.momC.signal(self.momC, "-CONT")
 
         # With momC resumed, it now receives DELETE_JOB2 request from
         # MS
@@ -5957,7 +5957,7 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.match_vnode_status([self.n0, self.n8, self.n9, self.n10], 'free')
 
         # temporarily suspend momC, prevents from operating on released nodes
-        self.momC.signal("-STOP")
+        self.momC.signal(self.momC, "-STOP")
 
         # Run pbs_release_nodes on nodes belonging to momB and momC
         cmd = [self.pbs_release_nodes_cmd, '-j', jid,
@@ -6052,15 +6052,15 @@ pbs.logjobmsg(pbs.event().job.id, "epilogue hook executed")
         self.server.set_op_mode(PTL_CLI)
         self.server.qterm(manner="immediate")
         self.server.set_op_mode(om)
-        self.assertFalse(self.server.isUp())
+        self.assertFalse(self.server.isUp(self.server))
 
         # resume momC, but this is a stale request (nothing happens)
         # since server is down.
-        self.momC.signal("-CONT")
+        self.momC.signal(self.momC, -CONT")
 
         # start the server again
         self.server.start()
-        self.assertTrue(self.server.isUp())
+        self.assertTrue(self.server.isUp(self.server))
 
         # make sure job is now running after server restart
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
