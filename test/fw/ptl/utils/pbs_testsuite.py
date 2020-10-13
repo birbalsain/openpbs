@@ -1101,7 +1101,7 @@ class PBSTestSuite(unittest.TestCase):
                 self.du.set_pbs_config(comm.hostname, confs=new_pbsconf)
                 comm.pbs_conf = new_pbsconf
                 comm.pi.initd(comm.hostname, "restart", daemon="comm")
-                if not comm.isUp(comm):
+                if not PBSService().isUp(comm):
                     self.fail("comm is not up")
 
     def _revert_pbsconf_mom(self, primary_server, vals_to_set):
@@ -1343,7 +1343,7 @@ class PBSTestSuite(unittest.TestCase):
             if not server_obj.isUp(server_obj):
                 self.fail("Server is not up")
         elif daemon_name == "sched":
-            if not server_obj.schedulers['default'].isUp(
+            if not PBSService().isUp(
                     server_obj.schedulers['default']):
                 self.fail("Scheduler is not up")
         elif daemon_name == "mom":
@@ -1351,7 +1351,7 @@ class PBSTestSuite(unittest.TestCase):
                     server_obj.moms.values()[0]):
                 self.fail("Mom is not up")
         elif daemon_name == "comm":
-            if not server_obj.comms.values()[0].isUp(
+            if not PBSService().isUp(
                     server_obj.comms.values()[0]):
                 self.fail("Comm is not up")
         else:
@@ -1484,23 +1484,23 @@ class PBSTestSuite(unittest.TestCase):
         """
         Revert the values set for comm
         """
-        rv = comm.isUp(comm)
+        rv = PBSService().isUp(comm)
         if not rv:
             self.logger.error('comm ' + comm.hostname + ' is down')
             comm.start()
             msg = 'Failed to restart comm ' + comm.hostname
-            self.assertTrue(comm.isUp(comm), msg)
+            self.assertTrue(PBSService().isUp(comm), msg)
 
     def revert_scheduler(self, scheduler, force=False):
         """
         Revert the values set for scheduler
         """
-        rv = scheduler.isUp(scheduler)
+        rv = PBSService().isUp(scheduler)
         if not rv:
             self.logger.error('scheduler ' + scheduler.hostname + ' is down')
             scheduler.start()
             msg = 'Failed to restart scheduler ' + scheduler.hostname
-            self.assertTrue(scheduler.isUp(scheduler), msg)
+            self.assertTrue(PBSService().isUp(scheduler), msg)
         if ((self.revert_to_defaults and self.sched_revert_to_defaults) or
                 force):
             rv = scheduler.revert_to_defaults()
