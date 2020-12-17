@@ -71,10 +71,10 @@ AC_DEFUN([PBS_AC_WITH_DATABASE_DIR],
       [database_lib="-lpq"],
       AC_MSG_ERROR([PBS database shared object library not found.])),
     # Using developer installed PostgreSQL
-    [test -r "$database_dir/lib64/libpq.so"],
-    [database_lib="-L$database_dir/lib64 -lpq"],
-    [test -r "$database_dir/lib/libpq.so"],
-    [database_lib="-L$database_dir/lib -lpq"],
+    [test -r "$database_dir/lib64/libpq.a"],
+    [database_lib="$database_dir/lib64/libpq.a"],
+    [test -r "$database_dir/lib/libpq.a"],
+    [database_lib="$database_dir/lib/libpq.a"],
     AC_MSG_ERROR([PBS database library not found.])
   )
   AC_MSG_RESULT([$database_dir])
