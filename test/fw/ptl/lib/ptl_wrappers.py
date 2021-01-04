@@ -101,85 +101,294 @@ from ptl.lib.ptl_service import PBSService, PBSInitServices
 from ptl.lib.ptl_batchutils import *
 
 
-class Wrappers:
+class Wrappers(PBSService):
     logger = logging.getLogger(__name__)
     du = DshUtils()
     utils = BatchUtils()
 
     def __init__(self, jobs={}, shortname=None, hostname=None, _is_local=True,
                  dflt_sched_name=None,
-        snapmap={},
-        nodes={},
-        reservations={},
-        queues={},
-        resources={},
-        hooks={},
-        pbshooks={},
-        entities={},
-        schedulers={},
-        default_queue=None,
-        last_error=[],  # type: array. Set for CLI IFL errors. Not reset
-        last_out=[],  # type: array. Set for CLI IFL output. Not reset
-        last_rc=None,  # Set for CLI IFL return code. Not thread-safe
-        moms={},
+                 snapmap={},
+                 nodes={},
+                 reservations={},
+                 queues={},
+                 resources={},
+                 hooks={},
+                 pbshooks={},
+                 entities={},
+                 schedulers={},
+                 default_queue=None,
+                 last_error=[],  # type: array. Set for CLI IFL errors. Not reset
+                 last_out=[],  # type: array. Set for CLI IFL output. Not reset
+                 last_rc=None,  # Set for CLI IFL return code. Not thread-safe
+                 moms={},
+                 # default timeout on connect/disconnect set to 60s to mimick the qsub
+                 # buffer introduced in PBS 11
+                 _conn_timeout=60,
+                 _conn_timer=None,
+                 _conn=None,
+                 _db_conn=None,
+                 current_user=None,
+                 pexpect_timeout=15,
+                 pexpect_sleep_time=.1,
+                 logprefix=None,
+                 pi=None,
+                 action=None,
+                 client=None,
+                 client_pbs_conf_file=None,
+                 client_conf={},
+                 default_client_pbs_conf=None,
+                 dflt_attributes={},
+                 get_op_mode=None):
+        self.jobs = jobs
+        self.shortname = shortname
+        self.hostname = hostname
+        self._is_local = _is_local
+        self.dflt_sched_name = dflt_sched_name
+        self.snapmap = snapmap
+        self.nodes = nodes
+        self.reservations = reservations
+        self.queues = queues
+        self.resources = resources
+        self.hooks = hooks
+        self.pbshooks = pbshooks
+        self.entities = entities
+        self.schedulers = schedulers
+        self.default_queue = default_queue
+        self.last_error = last_error  # type: array. Set for CLI IFL errors. Not reset
+        self.last_out = last_out  # type: array. Set for CLI IFL output. Not reset
+        self.last_rc = last_error  # Set for CLI IFL return code. Not thread-safe
+        self.moms = moms
+        self.version_tag = re.compile(
+            r"[a-zA-Z_]*(?P<version>[\d\.]+.[\w\d\.]*)[\s]*"),
         # default timeout on connect/disconnect set to 60s to mimick the qsub
         # buffer introduced in PBS 11
-        _conn_timeout=60,
-        _conn_timer=None,
-        _conn=None,
-        _db_conn=None,
-        current_user=None,
-        pexpect_timeout=15,
-        pexpect_sleep_time=.1,
-        logprefix=None,
-        pi=None,
-        client=None,
-        client_pbs_conf_file=None,
-        client_conf={},
-        default_client_pbs_conf=None,
-        dflt_attributes={},
-        get_op_mode=None):
-        self.jobs=jobs
-        self.shortname=shortname
-        self.hostname=hostname
-        self._is_local=_is_local
-        self.dflt_sched_name=dflt_sched_name
-        self.snapmap=snapmap
-        self.nodes=nodes
-        self.reservations=reservations
-        self.queues=queues
-        self.resources=resources
-        self.hooks=hooks
-        self.pbshooks=pbshooks
-        self.entities=entities
-        self.schedulers=schedulers
-        self.default_queue=default_queue
-        self.last_error=last_error  # type: array. Set for CLI IFL errors. Not reset
-        self.last_out=last_out  # type: array. Set for CLI IFL output. Not reset
-        self.last_rc=last_error # Set for CLI IFL return code. Not thread-safe
-        self.moms=moms
-
-        # default timeout on connect/disconnect set to 60s to mimick the qsub
-        # buffer introduced in PBS 11
-        self._conn_timeout=_conn_timeout
-        self._conn_timer=_conn_timer
-        self._conn=_conn
-        self._db_conn=_db_conn
-        self.current_user=current_user
-        self.pexpect_timeout=pexpect_timeout
-        self.pexpect_sleep_time=pexpect_sleep_time
-        self.logprefix=logprefix
-        self.pi=pi
-        self.client=client
-        self.client_pbs_conf_file=client_pbs_conf_file
-        self.client_conf=client_conf
-        self.default_client_pbs_conf=default_client_pbs_conf
-        self.dflt_ttributes=dflt_attributes
-        self.get_op_mode=get_op_mode
-
+        self._conn_timeout = _conn_timeout
+        self._conn_timer = _conn_timer
+        self._conn = _conn
+        self._db_conn = _db_conn
+        self.current_user = current_user
+        self.pexpect_timeout = pexpect_timeout
+        self.pexpect_sleep_time = pexpect_sleep_time
+        self.logprefix = logprefix
+        self.pi = pi
+        self.actions = action
+        self.client = client
+        self.client_pbs_conf_file = client_pbs_conf_file
+        self.client_conf = client_conf
+        self.default_client_pbs_conf = default_client_pbs_conf
+        self.dflt_ttributes = dflt_attributes
+        self.get_op_mode = get_op_mode
+        super().__init__()
 #
 # Begin IFL Wrappers
 #
+
+    def _filter(self, obj_type=None, attrib=None, id=None, extend=None,
+                op=None, attrop=None, bslist=None, mode=PTL_COUNTER,
+                idonly=True, grandtotal=False, db_access=None, runas=None,
+                resolve_indirectness=False):
+
+        if bslist is None:
+            try:
+                _a = resolve_indirectness
+                tmp_bsl = self.status(obj_type, attrib, id,
+                                      level=logging.DEBUG, extend=extend,
+                                      db_access=db_access, runas=runas,
+                                      resolve_indirectness=_a)
+                del _a
+            except PbsStatusError:
+                return None
+
+            bslist = self.utils.filter_batch_status(tmp_bsl, attrib)
+            del tmp_bsl
+
+        if bslist is None:
+            return None
+
+        if isinstance(attrib, str):
+            attrib = attrib.split(',')
+
+        total = {}
+        for bs in bslist:
+            if isinstance(attrib, list):
+                # when filtering on multiple values, ensure that they are
+                # all present on the object, otherwise skip
+                if attrop == PTL_AND:
+                    match = True
+                    for k in attrib:
+                        if k not in bs:
+                            match = False
+                    if not match:
+                        continue
+
+                for a in attrib:
+                    if a in bs:
+                        if op == SET:
+                            k = a
+                        else:
+                            # Since this is a list of attributes, no operator
+                            # was provided so we settle on "equal"
+                            k = a + '=' + str(bs[a])
+                        if mode == PTL_COUNTER:
+                            amt = 1
+                            if grandtotal:
+                                amt = PbsAttribute.decode_value(bs[a])
+                                if not isinstance(amt, (int, float)):
+                                    amt = 1
+                                if a in total:
+                                    total[a] += amt
+                                else:
+                                    total[a] = amt
+                            else:
+                                if k in total:
+                                    total[k] += amt
+                                else:
+                                    total[k] = amt
+                        elif mode == PTL_FILTER:
+                            if k in total:
+                                if idonly:
+                                    total[k].append(bs['id'])
+                                else:
+                                    total[k].append(bs)
+                            else:
+                                if idonly:
+                                    total[k] = [bs['id']]
+                                else:
+                                    total[k] = [bs]
+                        else:
+                            self.logger.error("Unhandled mode " + str(mode))
+                            return None
+
+            elif isinstance(attrib, dict):
+                tmptotal = {}  # The running count that will be used for total
+
+                # when filtering on multiple values, ensure that they are
+                # all present on the object, otherwise skip
+                match = True
+                for k, v in attrib.items():
+                    if k not in bs:
+                        match = False
+                        if attrop == PTL_AND:
+                            break
+                        else:
+                            continue
+                    amt = PbsAttribute.decode_value(bs[k])
+                    if isinstance(v, tuple):
+                        op = v[0]
+                        val = PbsAttribute.decode_value(v[1])
+                    elif op == SET:
+                        val = None
+                        pass
+                    else:
+                        op = EQ
+                        val = PbsAttribute.decode_value(v)
+
+                    if ((op == LT and amt < val) or
+                            (op == LE and amt <= val) or
+                            (op == EQ and amt == val) or
+                            (op == GE and amt >= val) or
+                            (op == GT and amt > val) or
+                            (op == NE and amt != val) or
+                            (op == MATCH and str(amt).find(str(val)) != -1) or
+                            (op == MATCH_RE and
+                             re.search(str(val), str(amt))) or
+                            (op == SET)):
+                        # There is a match, proceed to track the attribute
+                        self._filter_helper(bs, k, val, amt, op, mode,
+                                            tmptotal, idonly, grandtotal)
+                    elif attrop == PTL_AND:
+                        match = False
+                        if mode == PTL_COUNTER:
+                            # requesting specific key/value pairs should result
+                            # in 0 available elements
+                            tmptotal[str(k) + PTL_OP_TO_STR[op] + str(val)] = 0
+                        break
+                    elif mode == PTL_COUNTER:
+                        tmptotal[str(k) + PTL_OP_TO_STR[op] + str(val)] = 0
+
+                if attrop != PTL_AND or (attrop == PTL_AND and match):
+                    for k, v in tmptotal.items():
+                        if k not in total:
+                            total[k] = v
+                        else:
+                            total[k] += v
+        return total
+
+    def _filter_helper(self, bs, k, v, amt, op, mode, total, idonly,
+                       grandtotal):
+        # default operation to '='
+        if op is None or op not in PTL_OP_TO_STR:
+            op = '='
+        op_str = PTL_OP_TO_STR[op]
+
+        if op == SET:
+            # override PTL_OP_TO_STR fro SET operations
+            op_str = ''
+            v = ''
+
+        ky = k + op_str + str(v)
+        if mode == PTL_COUNTER:
+            incr = 1
+            if grandtotal:
+                if not isinstance(amt, (int, float)):
+                    incr = 1
+                else:
+                    incr = amt
+            if ky in total:
+                total[ky] += incr
+            else:
+                total[ky] = incr
+        elif mode == PTL_FILTER:
+            if ky in total:
+                if idonly:
+                    total[ky].append(bs['id'])
+                else:
+                    total[ky].append(bs)
+            else:
+                if idonly:
+                    total[ky] = [bs['id']]
+                else:
+                    total[ky] = [bs]
+
+    def counter(self, obj_type=None, attrib=None, id=None, extend=None,
+                op=None, attrop=None, bslist=None, level=logging.INFO,
+                idonly=True, grandtotal=False, db_access=None, runas=None,
+                resolve_indirectness=False):
+        """
+        Accumulate properties set on an object. For example, to
+        count number of free nodes:
+        ``server.counter(VNODE,{'state':'free'})``
+
+        :param obj_type: The type of object to query, one of the
+                         * objects
+        :param attrib: Attributes to query, can be a string, a
+                       list, a dictionary
+        :type attrib: str or list or dictionary
+        :param id: The id of the object to act upon
+        :param extend: The extended parameter to pass to the stat
+                       call
+        :param op: The operation used to match attrib to what is
+                   queried. SET or None
+        :type op: str or None
+        :param attrop: Operation on multiple attributes, either
+                       PTL_AND, PTL_OR
+        :param bslist: Optional, use a batch status dict list
+                       instead of an obj_type
+        :param idonly: if true, return the name/id of the matching
+                       objects
+        :type idonly: bool
+        :param db_access: credentials to access db, either a path
+                          to file or dictionary
+        :type db_access: str or dictionary
+        :param runas: run as user
+        :type runas: str or None
+        """
+        self.logit('counter: ', obj_type, attrib, id, level=level)
+        return self._filter(obj_type, attrib, id, extend, op, attrop, bslist,
+                            PTL_COUNTER, idonly, grandtotal, db_access,
+                            runas=runas,
+                            resolve_indirectness=resolve_indirectness)
 
     def _connect(self, hostname, attempt=1):
         if ((self._conn is None or self._conn < 0) or
@@ -479,7 +688,7 @@ class Wrappers:
         elif cmd in ('manager', 'select', 'status'):
             return eval(out[0])
 
-    def logit (self, msg, obj_type, attrib, id, level=logging.INFO):
+    def logit(self, msg, obj_type, attrib, id, level=logging.INFO):
         """
         Generic logging routine for ``IFL`` commands
 
@@ -504,6 +713,319 @@ class Wrappers:
             if attrib:
                 s += [' ' + str(attrib)]
             self.logger.log(level, "".join(s))
+
+    def expect(self, obj_type, attrib=None, id=None, op=EQ, attrop=PTL_AND,
+               attempt=0, max_attempts=None, interval=None, count=None,
+               extend=None, offset=0, runas=None, level=logging.INFO,
+               msg=None, trigger_sched_cycle=True):
+        """
+        expect an attribute to match a given value as per an
+        operation.
+
+        :param obj_type: The type of object to query, JOB, SERVER,
+                         SCHEDULER, QUEUE, NODE
+        :type obj_type: str
+        :param attrib: Attributes to query, can be a string, a list,
+                       or a dict
+        :type attrib: str or list or dictionary
+        :param id: The id of the object to act upon
+        :param op: An operation to perform on the queried data,
+                   e.g., EQ, SET, LT,..
+        :param attrop: Operation on multiple attributes, either
+                       PTL_AND, PTL_OR when an PTL_AND is used, only
+                       batch objects having all matches are
+                       returned, otherwise an OR is applied
+        :param attempt: The number of times this function has been
+                        called
+        :type attempt: int
+        :param max_attempts: The maximum number of attempts to
+                             perform
+        :type max_attempts: int or None
+        :param interval: The interval time between attempts.
+        :param count: If True, attrib will be accumulated using
+                      function counter
+        :type count: bool
+        :param extend: passed to the stat call
+        :param offset: the time to wait before the initial check.
+                       Defaults to 0.
+        :type offset: int
+        :param runas: query as a given user. Defaults to current
+                      user
+        :type runas: str or None
+        :param msg: Message from last call of this function, this
+                    message will be used while raising
+                    PtlExpectError.
+        :type msg: str or None
+        :param trigger_sched_cycle: True by default can be set to False if
+                          kicksched_action is not supposed to be called
+        :type trigger_sched_cycle: Boolean
+
+        :returns: True if attributes are as expected
+
+        :raises: PtlExpectError if attributes are not as expected
+        """
+
+        if attempt == 0 and offset > 0:
+            self.logger.log(level, self.logprefix + 'expect offset set to ' +
+                            str(offset))
+            time.sleep(offset)
+
+        if attrib is None:
+            attrib = {}
+
+        if ATTR_version in attrib and max_attempts is None:
+            max_attempts = 3
+
+        if max_attempts is None:
+            max_attempts = self.ptl_conf['max_attempts']
+
+        if interval is None:
+            interval = self.ptl_conf['attempt_interval']
+
+        if attempt >= max_attempts:
+            _msg = "expected on " + self.logprefix + msg
+            raise PtlExpectError(rc=1, rv=False, msg=_msg)
+
+        if obj_type == SERVER and id is None:
+            id = self.hostname
+
+        if isinstance(attrib, str):
+            attrib = {attrib: ''}
+        elif isinstance(attrib, list):
+            d = {}
+            for l in attrib:
+                d[l] = ''
+            attrib = d
+
+        # Add check for substate=42 for jobstate=R, if not added explicitly.
+        if obj_type == JOB:
+            add_attribs = {}
+            substate = False
+            for k, v in attrib.items():
+                if k == 'job_state' and ((isinstance(v, tuple) and
+                                          'R' in v[-1]) or v == 'R'):
+                    add_attribs['substate'] = 42
+                elif k == 'job_state=R':
+                    add_attribs['substate=42'] = v
+                elif 'substate' in k:
+                    substate = True
+            if add_attribs and not substate:
+                attrib.update(add_attribs)
+                attrop = PTL_AND
+            del add_attribs, substate
+
+        prefix = 'expect on ' + self.logprefix
+        msg = []
+        attrs_to_ignore = []
+        for k, v in attrib.items():
+            args = None
+            if isinstance(v, tuple):
+                operator = v[0]
+                if len(v) > 2:
+                    args = v[2:]
+                val = v[1]
+            else:
+                operator = op
+                val = v
+            if operator not in PTL_OP_TO_STR:
+                self.logger.log(level, "Operator not supported by expect(), "
+                                "cannot verify change in " + str(k))
+                attrs_to_ignore.append(k)
+                continue
+            msg += [k, PTL_OP_TO_STR[operator].strip()]
+            if isinstance(val, collections.Callable):
+                msg += ['callable(' + val.__name__ + ')']
+                if args is not None:
+                    msg.extend([str(x) for x in args])
+            else:
+                msg += [str(val)]
+            msg += [PTL_ATTROP_TO_STR[attrop]]
+
+        # Delete the attributes that we cannot verify
+        for k in attrs_to_ignore:
+            del(attrib[k])
+
+        if attrs_to_ignore and len(attrib) < 1 and op == SET:
+            return True
+
+        # remove the last converted PTL_ATTROP_TO_STR
+        if len(msg) > 1:
+            msg = msg[:-1]
+
+        if len(attrib) == 0:
+            msg += [PTL_OP_TO_STR[op]]
+
+        msg += [PBS_OBJ_MAP[obj_type]]
+        if id is not None:
+            msg += [str(id)]
+        if attempt > 0:
+            msg += ['attempt:', str(attempt + 1)]
+
+        # Default count to True if the attribute contains an '=' in its name
+        # for example 'job_state=R' implies that a count of job_state is needed
+        if count is None and self.utils.operator_in_attribute(attrib):
+            count = True
+
+        if count:
+            newattr = self.utils.convert_attributes_by_op(attrib)
+            if len(newattr) == 0:
+                newattr = attrib
+
+            statlist = [self.counter(obj_type, newattr, id, extend, op=op,
+                                     attrop=attrop, level=logging.DEBUG,
+                                     runas=runas)]
+        else:
+            try:
+                statlist = self.status(obj_type, attrib, id=id,
+                                       level=logging.DEBUG, extend=extend,
+                                       runas=runas, logerr=False)
+            except PbsStatusError:
+                statlist = []
+
+        if (statlist is None or len(statlist) == 0 or
+                statlist[0] is None or len(statlist[0]) == 0):
+            if op == UNSET or list(set(attrib.values())) == [0]:
+                self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
+                return True
+            else:
+                time.sleep(interval)
+                msg = " no data for " + " ".join(msg)
+                self.logger.log(level, prefix + msg)
+                return self.expect(obj_type, attrib, id, op, attrop,
+                                   attempt + 1, max_attempts, interval, count,
+                                   extend, level=level, msg=msg)
+        else:
+            if op == UNSET and obj_type in (SERVER, SCHED, NODE, HOOK, QUEUE):
+                for key in attrib.keys():
+                    if key in self.__special_attr_keys[obj_type]:
+                        val = self.get_special_attr_val(obj_type, key, id)
+                        attrib = {key: val}
+                        op = EQ
+                        return self.expect(obj_type, attrib, id, op, attrop,
+                                           attempt, max_attempts, interval,
+                                           count, extend, runas=runas,
+                                           level=level, msg=msg)
+
+        if attrib is None:
+            time.sleep(interval)
+            return self.expect(obj_type, attrib, id, op, attrop, attempt + 1,
+                               max_attempts, interval, count, extend,
+                               runas=runas, level=level, msg=" ".join(msg))
+        inp_op = op
+        for k, v in attrib.items():
+            varargs = None
+            if isinstance(v, tuple):
+                op = v[0]
+                if len(v) > 2:
+                    varargs = v[2:]
+                v = v[1]
+            else:
+                op = inp_op
+
+            for stat in statlist:
+                if k not in stat:
+                    if op == UNSET:
+                        continue
+
+                    # Sometimes users provide the wrong case for attributes
+                    # Convert to lowercase and compare
+                    attrs_lower = {
+                        ks.lower(): [ks, vs] for ks, vs in stat.items()}
+                    k_lower = k.lower()
+                    if k_lower not in attrs_lower:
+                        if (statlist.index(stat) + 1) < len(statlist):
+                            continue
+                        time.sleep(interval)
+                        _tsc = trigger_sched_cycle
+                        return self.expect(obj_type, attrib, id, op, attrop,
+                                           attempt + 1, max_attempts,
+                                           interval, count, extend,
+                                           level=level, msg=" ".join(msg),
+                                           trigger_sched_cycle=_tsc)
+                    stat_v = attrs_lower[k_lower][1]
+                    stat_k = attrs_lower[k_lower][0]
+                else:
+                    stat_v = stat[k]
+                    stat_k = k
+
+                if stat_k == ATTR_version:
+                    m = self.version_tag.match(stat_v)
+                    if m:
+                        stat_v = m.group('version')
+                    else:
+                        time.sleep(interval)
+                        return self.expect(obj_type, attrib, id, op, attrop,
+                                           attempt + 1, max_attempts, interval,
+                                           count, extend, runas=runas,
+                                           level=level, msg=" ".join(msg))
+
+                # functions/methods are invoked and their return value
+                # used on expect
+                if isinstance(v, collections.Callable):
+                    if varargs is not None:
+                        rv = v(stat_v, *varargs)
+                    else:
+                        rv = v(stat_v)
+                    if isinstance(rv, bool):
+                        if op == NOT:
+                            if not rv:
+                                continue
+                        if rv:
+                            continue
+                    else:
+                        v = rv
+
+                stat_v = PbsAttribute.decode_value(stat_v)
+                v = PbsAttribute.decode_value(str(v))
+
+                if stat_k == ATTR_version:
+                    stat_v = LooseVersion(str(stat_v))
+                    v = LooseVersion(str(v))
+
+                if op == EQ and stat_v == v:
+                    continue
+                elif op == SET and count and stat_v == v:
+                    continue
+                elif op == SET and count in (False, None):
+                    continue
+                elif op == NE and stat_v != v:
+                    continue
+                elif op == LT:
+                    if stat_v < v:
+                        continue
+                elif op == GT:
+                    if stat_v > v:
+                        continue
+                elif op == LE:
+                    if stat_v <= v:
+                        continue
+                elif op == GE:
+                    if stat_v >= v:
+                        continue
+                elif op == MATCH_RE:
+                    if re.search(str(v), str(stat_v)):
+                        continue
+                elif op == MATCH:
+                    if str(stat_v).find(str(v)) != -1:
+                        continue
+
+                msg += [' got: ' + stat_k + ' = ' + str(stat_v)]
+                self.logger.info(prefix + " ".join(msg))
+                time.sleep(interval)
+
+                # run custom actions defined for this object type
+                if trigger_sched_cycle and self.actions:
+                    for act_obj in self.actions.get_actions_by_type(obj_type):
+                        if act_obj.enabled:
+                            act_obj.action(self, obj_type, attrib, id, op,
+                                           attrop)
+                return self.expect(obj_type, attrib, id, op, attrop,
+                                   attempt + 1, max_attempts, interval, count,
+                                   extend, level=level, msg=" ".join(msg),
+                                   trigger_sched_cycle=trigger_sched_cycle)
+
+        self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
+        return True
 
     def status(self, obj_type=SERVER, attrib=None, id=None,
                extend=None, level=logging.INFO, db_access=None, runas=None,
@@ -971,7 +1493,7 @@ class Wrappers:
         # the whole path
         # Get sleep command depending on which Mom the job will run
         if ((ATTR_executable in obj.attributes) and
-           ('sleep' in obj.attributes[ATTR_executable])):
+                ('sleep' in obj.attributes[ATTR_executable])):
             obj.attributes[ATTR_executable] = (
                 list(self.moms.values())[0]).sleep_cmd
 
@@ -2096,6 +2618,78 @@ class Wrappers:
             self._disconnect(c)
 
         return rc
+
+    def alterresv(self, resvid, attrib, extend=None, runas=None,
+                  logerr=True):
+        """
+        Alter attributes associated to a reservation. Raises
+        ``PbsResvAlterError`` on error.
+        :param resvid: identifier of the reservation.
+        :type resvid: str.
+        :param attrib: A dictionary of attributes to set.
+        :type attrib: dictionary.
+        :param extend: extend options.
+        :param runas: run as user.
+        :type runas: str or None.
+        :param logerr: If False, CLI commands do not log error,
+                       i.e. silent mode.
+        :type logerr: bool.
+        :raises: PbsResvAlterError.
+        """
+        prefix = 'reservation alter on ' + self.shortname
+        if runas is not None:
+            prefix += ' as ' + str(runas)
+        prefix += ': ' + resvid
+
+        if attrib is not None:
+            prefix += ' %s' % (str(attrib))
+        self.logger.info(prefix)
+
+        c = None
+        resvid = resvid.split()
+        if self.get_op_mode == PTL_CLI:
+            pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
+                                 'pbs_ralter')]
+            if attrib is not None:
+                if extend is not None:
+                    attrib['extend'] = extend
+                _conf = self.default_client_pbs_conf
+                pcmd += self.utils.convert_to_cli(attrib, op=IFL_RALTER,
+                                                  hostname=self.client,
+                                                  dflt_conf=_conf)
+            pcmd += resvid
+            if not self.default_client_pbs_conf:
+                pcmd = ['PBS_CONF_FILE=' + self.client_pbs_conf_file] + pcmd
+                as_script = True
+            else:
+                as_script = False
+            ret = self.du.run_cmd(self.client, pcmd, runas=runas,
+                                  as_script=as_script, level=logging.INFOCLI,
+                                  logerr=logerr)
+            rc = ret['rc']
+            if ret['err'] != ['']:
+                self.last_error = ret['err']
+            if ret['out'] != ['']:
+                self.last_out = ret['out']
+            self.last_rc = rc
+        elif runas is not None:
+            rc = self.pbs_api_as('alterresv', resvid, runas, data=attrib,
+                                 extend=extend)
+        else:
+            c = self._connect(self.hostname)
+            if c < 0:
+                return c
+            a = self.utils.convert_to_attrl(attrib)
+            rc = pbs_modify_resv(c, resvid, a, extend)
+
+        if rc != 0:
+            raise PbsResvAlterError(rc=rc, rv=False, msg=self.geterrmsg(),
+                                    post=self._disconnect, conn=c)
+        else:
+            return rc
+
+        if c:
+            self._disconnect(c)
 
     def holdjob(self, jobid=None, holdtype=None, extend=None, runas=None,
                 logerr=True):
