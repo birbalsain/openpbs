@@ -134,6 +134,9 @@ class Wrappers(PBSService):
                  logprefix=None,
                  pi=None,
                  action=None,
+                 version_tag=None,
+                 __special_attr_keys={},
+                 __special_attr={},
                  client=None,
                  client_pbs_conf_file=None,
                  client_conf={},
@@ -173,6 +176,9 @@ class Wrappers(PBSService):
         self.logprefix = logprefix
         self.pi = pi
         self.actions = action
+        self.version_tag = version_tag
+        self.__special_attr_keys =  __special_attr_keys
+        self.__special_attr = __special_attr
         self.client = client
         self.client_pbs_conf_file = client_pbs_conf_file
         self.client_conf = client_conf
@@ -180,9 +186,59 @@ class Wrappers(PBSService):
         self.dflt_ttributes = dflt_attributes
         self.get_op_mode = get_op_mode
         super().__init__()
-#
-# Begin IFL Wrappers
-#
+
+    def update_special_attr(self, obj_type, id=None):
+        """
+        Update special attributes(__special_attr) dictionary
+        :param obj_type: The type of object to update attribute values
+                         in special attribute dictionary.
+        :type obj_type: str
+        :param id: The id of the object to act upon
+        :type id: str
+        """
+        if not id:
+            if obj_type in (SERVER, NODE):
+                id = self.hostname
+            elif obj_type == SCHED:
+                id = 'default'
+        id_attr_dict = {}
+        obj_stat = self.status(obj_type, id=id)[0]
+        for key in obj_stat.keys():
+            if key in self.__special_attr_keys[obj_type]:
+                id_attr_dict[key] = obj_stat[key]
+
+        id_attr = {id: id_attr_dict}
+        self.__special_attr[obj_type] = id_attr
+
+    def get_special_attr_val(self, obj_type, attr, id=None):
+        """
+        Get value for given attribute from
+        special attributes(__special_attr) dictionary
+        :param obj_type: The type of object to update attribute values
+                         in special attribute dictionary.
+        :type obj_type: str
+        :param attr: The attribute for which value requested.
+        :type id: str
+        :param id: The id of the object to act upon
+        :type id: str
+        """
+
+        if not id:
+            if obj_type in (SERVER, NODE):
+                id = self.hostname
+            elif obj_type == SCHED:
+                id = 'default'
+        res_val = ATTR_rescavail + '.ncpus'
+        if obj_type in (NODE, VNODE) and attr == res_val:
+            obj_stat = self.status(obj_type, id=id)[0]
+            if 'pcpus' not in obj_stat.keys():
+                return 1
+            else:
+                return self.__special_attr[obj_type][id][attr]
+        elif obj_type == HOOK and (id == 'pbs_cgroups' and attr == 'freq'):
+            return 120
+        else:
+            return self.__special_attr[obj_type][id][attr]
 
     def _filter(self, obj_type=None, attrib=None, id=None, extend=None,
                 op=None, attrop=None, bslist=None, mode=PTL_COUNTER,

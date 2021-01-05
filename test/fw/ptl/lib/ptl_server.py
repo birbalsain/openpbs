@@ -304,6 +304,9 @@ class Server(PBSService):
                         self.logprefix,
                         PBSInitServices(hostname=self.hostname),
                         self.actions,
+                        self.version_tag,
+                        self.__special_attr_keys,
+                        self.__special_attr,
                         self.client,
                         self.client_pbs_conf_file,
                         self.client_conf,
@@ -580,6 +583,23 @@ class Server(PBSService):
                                max_attempts, interval, starttime, endtime,
                                level=level, existence=existence)
 
+    def pbs_version(self):
+        """
+        Get the version of the scheduler instance
+        """
+        if self.version:
+            return self.version
+
+        version = self.log_match('pbs_version', tail=False)
+        if version:
+            version = version[1].strip().split('=')[1]
+        else:
+            version = "unknown"
+
+        self.version = LooseVersion(version)
+
+        return self.version
+
     def revert_to_defaults(self, reverthooks=True, revertqueues=True,
                            revertresources=True, delhooks=True,
                            delqueues=True, delscheds=True, delnodes=True,
@@ -736,59 +756,6 @@ class Server(PBSService):
                 unsetlist.append(k)
         if len(unsetlist) != 0:
             self.manager(MGR_CMD_UNSET, MGR_OBJ_SERVER, unsetlist)
-
-    def update_special_attr(self, obj_type, id=None):
-        """
-        Update special attributes(__special_attr) dictionary
-        :param obj_type: The type of object to update attribute values
-                         in special attribute dictionary.
-        :type obj_type: str
-        :param id: The id of the object to act upon
-        :type id: str
-        """
-        if not id:
-            if obj_type in (SERVER, NODE):
-                id = self.hostname
-            elif obj_type == SCHED:
-                id = 'default'
-        id_attr_dict = {}
-        obj_stat = self.status(obj_type, id=id)[0]
-        for key in obj_stat.keys():
-            if key in self.__special_attr_keys[obj_type]:
-                id_attr_dict[key] = obj_stat[key]
-
-        id_attr = {id: id_attr_dict}
-        self.__special_attr[obj_type] = id_attr
-
-    def get_special_attr_val(self, obj_type, attr, id=None):
-        """
-        Get value for given attribute from
-        special attributes(__special_attr) dictionary
-        :param obj_type: The type of object to update attribute values
-                         in special attribute dictionary.
-        :type obj_type: str
-        :param attr: The attribute for which value requested.
-        :type id: str
-        :param id: The id of the object to act upon
-        :type id: str
-        """
-
-        if not id:
-            if obj_type in (SERVER, NODE):
-                id = self.hostname
-            elif obj_type == SCHED:
-                id = 'default'
-        res_val = ATTR_rescavail + '.ncpus'
-        if obj_type in (NODE, VNODE) and attr == res_val:
-            obj_stat = self.status(obj_type, id=id)[0]
-            if 'pcpus' not in obj_stat.keys():
-                return 1
-            else:
-                return self.__special_attr[obj_type][id][attr]
-        elif obj_type == HOOK and (id == 'pbs_cgroups' and attr == 'freq'):
-            return 120
-        else:
-            return self.__special_attr[obj_type][id][attr]
 
     def delete_site_hooks(self):
         """
@@ -3474,7 +3441,7 @@ class Server(PBSService):
     def alterresv(self, resvid, attrib, extend=None, runas=None,
                   logerr=True):
         wrapper = self.wrappers()
-        return wrapper.alterresv(esvid, attrib, extend, runas, logerr)
+        return wrapper.alterresv(resvid, attrib, extend, runas, logerr)
 
     def holdjob(self, jobid=None, holdtype=None, extend=None, runas=None,
                 logerr=True):
@@ -3533,3 +3500,7 @@ class Server(PBSService):
         wrapper = self.wrappers()
         return wrapper.qterm(manner, extend, server_name, runas,
                              logerr)
+
+    def update_special_attr(self, obj_type, id=None):
+        wrapper = self.wrappers()
+        return wrapper.update_special_attr(obj_type, id)
