@@ -2244,7 +2244,7 @@ e.accept()
 
         self.server.alterresv(rid_new, a, extend='force')
         msg = "pbs_ralter: " + rid_new + " CONFIRMED"
-        self.assertEqual(msg, self.server.last_out[0])
+        self.assertEqual(msg, Wrappers.last_out[0])
         resv_attr = self.server.status(RESV, id=rid_new)[0]
         resv_end = bu.convert_stime_to_seconds(resv_attr['reserve_end'])
         self.assertEqual(int(resv_end), etime)

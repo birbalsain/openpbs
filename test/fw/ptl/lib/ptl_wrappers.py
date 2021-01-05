@@ -105,6 +105,7 @@ class Wrappers(PBSService):
     logger = logging.getLogger(__name__)
     du = DshUtils()
     utils = BatchUtils()
+    last_out = []
 
     def __init__(self, jobs={}, shortname=None, hostname=None, _is_local=True,
                  dflt_sched_name=None,
@@ -119,7 +120,6 @@ class Wrappers(PBSService):
                  schedulers={},
                  default_queue=None,
                  last_error=[],  # type: array. Set for CLI IFL errors. Not reset
-                 last_out=[],  # type: array. Set for CLI IFL output. Not reset
                  last_rc=None,  # Set for CLI IFL return code. Not thread-safe
                  moms={},
                  # default timeout on connect/disconnect set to 60s to mimick the qsub
@@ -159,7 +159,6 @@ class Wrappers(PBSService):
         self.schedulers = schedulers
         self.default_queue = default_queue
         self.last_error = last_error  # type: array. Set for CLI IFL errors. Not reset
-        self.last_out = last_out  # type: array. Set for CLI IFL output. Not reset
         self.last_rc = last_error  # Set for CLI IFL return code. Not thread-safe
         self.moms = moms
         self.version_tag = re.compile(
@@ -177,7 +176,7 @@ class Wrappers(PBSService):
         self.pi = pi
         self.actions = action
         self.version_tag = version_tag
-        self.__special_attr_keys =  __special_attr_keys
+        self.__special_attr_keys = __special_attr_keys
         self.__special_attr = __special_attr
         self.client = client
         self.client_pbs_conf_file = client_pbs_conf_file
@@ -2726,7 +2725,7 @@ class Wrappers(PBSService):
             if ret['err'] != ['']:
                 self.last_error = ret['err']
             if ret['out'] != ['']:
-                self.last_out = ret['out']
+                Wrappers.last_out = ret['out']
             self.last_rc = rc
         elif runas is not None:
             rc = self.pbs_api_as('alterresv', resvid, runas, data=attrib,

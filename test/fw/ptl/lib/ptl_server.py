@@ -205,7 +205,6 @@ class Server(PBSService):
         self.version = None
         self.default_queue = None
         self.last_error = []  # type: array. Set for CLI IFL errors. Not reset
-        self.last_out = []  # type: array. Set for CLI IFL output. Not reset
         self.last_rc = None  # Set for CLI IFL return code. Not thread-safe
         self.moms = {}
 
@@ -291,7 +290,6 @@ class Server(PBSService):
                         self.schedulers,
                         self.default_queue,
                         self.last_error,
-                        self.last_out,
                         self.last_rc,
                         self.moms,
                         self._conn_timeout,
@@ -1610,143 +1608,6 @@ class Server(PBSService):
         rv = self.cleanup_jobs()
         self.cleanup_reservations()
         return rv
-
-    def update_attributes(self, obj_type, bs, overwrite=False):
-        """
-        Populate objects from batch status data
-        """
-        if bs is None:
-            return
-
-        for binfo in bs:
-            if 'id' not in binfo:
-                continue
-            id = binfo['id']
-            obj = None
-            if obj_type == JOB:
-                if ATTR_owner in binfo:
-                    user = binfo[ATTR_owner].split('@')[0]
-                else:
-                    user = None
-                if id in self.jobs:
-                    if overwrite:
-                        self.jobs[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.jobs[id].attributes.update(binfo)
-                    if self.jobs[id].username != user:
-                        self.jobs[id].username = user
-                else:
-                    self.jobs[id] = Job(user, binfo)
-                obj = self.jobs[id]
-            elif obj_type in (VNODE, NODE):
-                if id in self.nodes:
-                    if overwrite:
-                        self.nodes[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.nodes[id].attributes.update(binfo)
-                else:
-                    if 'Mom' in binfo:
-                        self.nodes[id] = get_mom_obj(self, binfo['Mom'], binfo,
-                                                     snapmap={NODE: None})
-                    else:
-                        self.nodes[id] = get_mom_obj(self, id, binfo,
-                                                     snapmap={NODE: None})
-                obj = self.nodes[id]
-            elif obj_type == SERVER:
-                if overwrite:
-                    self.attributes = copy.deepcopy(binfo)
-                else:
-                    self.attributes.update(binfo)
-                obj = self
-            elif obj_type == QUEUE:
-                if id in self.queues:
-                    if overwrite:
-                        self.queues[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.queues[id].attributes.update(binfo)
-                else:
-                    self.queues[id] = Queue(id, binfo, server=self)
-                obj = self.queues[id]
-            elif obj_type == RESV:
-                if id in self.reservations:
-                    if overwrite:
-                        self.reservations[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.reservations[id].attributes.update(binfo)
-                else:
-                    self.reservations[id] = Reservation(id, binfo)
-                obj = self.reservations[id]
-            elif obj_type == HOOK:
-                if id in self.hooks:
-                    if overwrite:
-                        self.hooks[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.hooks[id].attributes.update(binfo)
-                else:
-                    self.hooks[id] = Hook(id, binfo, server=self)
-                obj = self.hooks[id]
-            elif obj_type == PBS_HOOK:
-                if id in self.pbshooks:
-                    if overwrite:
-                        self.pbshooks[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.pbshooks[id].attributes.update(binfo)
-                else:
-                    self.pbshooks[id] = Hook(id, binfo, server=self)
-                obj = self.pbshooks[id]
-            elif obj_type == SCHED:
-                if id in self.schedulers:
-                    if overwrite:
-                        self.schedulers[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.schedulers[id].attributes.update(binfo)
-                    if 'sched_priv' in binfo:
-                        self.schedulers[id].setup_sched_priv(
-                            binfo['sched_priv'])
-                else:
-                    if 'sched_host' not in binfo:
-                        hostname = self.hostname
-                    else:
-                        hostname = binfo['sched_host']
-                    if SCHED in self.snapmap:
-                        snap = self.snap
-                        snapmap = self.snapmap
-                    else:
-                        snap = None
-                        snapmap = {}
-                    spriv = None
-                    if 'sched_priv' in binfo:
-                        spriv = binfo['sched_priv']
-                    self.schedulers[id] = Scheduler(server=self,
-                                                    hostname=hostname,
-                                                    snap=snap,
-                                                    snapmap=snapmap,
-                                                    id=id,
-                                                    sched_priv=spriv)
-                    if overwrite:
-                        self.schedulers[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.schedulers[id].attributes.update(binfo)
-                obj = self.schedulers[id]
-
-            elif obj_type == RSC:
-                if id in self.resources:
-                    if overwrite:
-                        self.resources[id].attributes = copy.deepcopy(binfo)
-                    else:
-                        self.resources[id].attributes.update(binfo)
-                else:
-                    rtype = None
-                    rflag = None
-                    if 'type' in binfo:
-                        rtype = binfo['type']
-                    if 'flag' in binfo:
-                        rflag = binfo['flag']
-                    self.resources[id] = Resource(id, rtype, rflag)
-
-            if obj is not None:
-                self.utils.update_attributes_list(obj)
-                obj.__dict__.update(binfo)
 
     def filter(self, obj_type=None, attrib=None, id=None, extend=None, op=None,
                attrop=None, bslist=None, idonly=True, grandtotal=False,
