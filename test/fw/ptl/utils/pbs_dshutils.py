@@ -2078,7 +2078,7 @@ class DshUtils(object):
                               preserve_permission=False, level=level)
             # remove local temp dir
             os.rmdir(tmpdir)
-        if asuser is not None:
+        if self.is_localhost(hostname) and asuser is not None:
             # by default mkdtemp creates dir with 0600 permission
             # to create dir as different user first change the dir
             # permission to 0644 so that other user has read permission

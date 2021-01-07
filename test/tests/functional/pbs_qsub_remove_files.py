@@ -106,22 +106,22 @@ class TestQsub_remove_files(TestFunctional):
         j = Job(TEST_USER, attrs={ATTR_k: 'de', ATTR_R: 'e'})
         j.set_sleep_time(5)
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(self.mom.hostname, asuser=TEST_USER)
         self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
+            {'$usecp': self.mom.hostname + ':' + sub_dir +
+             ' ' + self.mom.hostname + ':' + mapping_dir})
         self.mom.restart()
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.server.expect(JOB, {ATTR_R: 'e'}, id=jid)
         self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
-        for name in os.listdir(mapping_dir):
+        for name in self.du.listdir(self.mom.hostname, path=mapping_dir):
             p = re.search('STDIN.o*', name)
             if p:
                 self.logger.info('Match found: ' + p.group())
             else:
                 self.assertTrue(False)
-        file_count = len([name for name in os.listdir(
-            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        file_count = len([name for name in self.du.listdir(
+            mapping_dir) if self.du.isfile(os.path.join(mapping_dir, name))])
         self.assertEqual(1, file_count)
 
     def test_remove_files_error_custom_path(self):
