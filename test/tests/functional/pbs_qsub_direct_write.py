@@ -124,8 +124,8 @@ class TestQsub_direct_write(TestFunctional):
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
         mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
         self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
+            {'$usecp': self.mom.hostname + ':' + sub_dir +
+             ' ' + self.server.hostname + ':' + mapping_dir})
         self.mom.restart()
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
