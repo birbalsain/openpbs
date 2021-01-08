@@ -99,13 +99,12 @@ from ptl.lib.ptl_service import PBSService, PBSInitServices
 from ptl.lib.ptl_expect_action import ExpectActions
 from ptl.lib.ptl_service import PBSService, PBSInitServices
 from ptl.lib.ptl_batchutils import *
-
+from ptl.lib.ptl_server import get_server_obj
 
 class Wrappers(PBSService):
     logger = logging.getLogger(__name__)
     du = DshUtils()
     utils = BatchUtils()
-    last_out = []
 
     def __init__(self, jobs={}, shortname=None, hostname=None, _is_local=True,
                  dflt_sched_name=None,
@@ -121,6 +120,7 @@ class Wrappers(PBSService):
                  default_queue=None,
                  last_error=[],  # type: array. Set for CLI IFL errors. Not reset
                  last_rc=None,  # Set for CLI IFL return code. Not thread-safe
+                 last_out=[],
                  moms={},
                  # default timeout on connect/disconnect set to 60s to mimick the qsub
                  # buffer introduced in PBS 11
@@ -160,6 +160,7 @@ class Wrappers(PBSService):
         self.default_queue = default_queue
         self.last_error = last_error  # type: array. Set for CLI IFL errors. Not reset
         self.last_rc = last_error  # Set for CLI IFL return code. Not thread-safe
+        self.last_out = last_out
         self.moms = moms
         self.version_tag = re.compile(
             r"[a-zA-Z_]*(?P<version>[\d\.]+.[\w\d\.]*)[\s]*"),
@@ -185,6 +186,45 @@ class Wrappers(PBSService):
         self.dflt_ttributes = dflt_attributes
         self.get_op_mode = get_op_mode
         super().__init__()
+
+    def update_values(self):
+        return [self.jobs,
+        self.shortname,
+        self.hostname,
+        self._is_local,
+        self.dflt_sched_name,
+        self.snapmap,
+        self.nodes,
+        self.reservations,
+        self.queues,
+        self.resources,
+        self.hooks,
+        self.pbshooks,
+        self.entities,
+        self.schedulers,
+        self.default_queue,
+        self.last_error,
+        self.last_out,
+        self.last_rc,
+        self.moms,
+        self._conn_timeout,
+        self._conn_timer,
+        self._conn,
+        self._db_conn,
+        self.current_user,
+        self.pexpect_timeout,
+        self.pexpect_sleep_time,
+        self.logprefix,
+        self.pi,
+        self.actions,
+        self.version_tag,
+        self.__special_attr_keys,
+        self.__special_attr,
+        self.client,
+        self.client_pbs_conf_file,
+        self.client_conf,
+        self.default_client_pbs_conf,
+        self.dflt_ttributes]
 
     def update_special_attr(self, obj_type, id=None):
         """
@@ -768,320 +808,7 @@ class Wrappers(PBSService):
             if attrib:
                 s += [' ' + str(attrib)]
             self.logger.log(level, "".join(s))
-
-    def expect(self, obj_type, attrib=None, id=None, op=EQ, attrop=PTL_AND,
-               attempt=0, max_attempts=None, interval=None, count=None,
-               extend=None, offset=0, runas=None, level=logging.INFO,
-               msg=None, trigger_sched_cycle=True):
-        """
-        expect an attribute to match a given value as per an
-        operation.
-
-        :param obj_type: The type of object to query, JOB, SERVER,
-                         SCHEDULER, QUEUE, NODE
-        :type obj_type: str
-        :param attrib: Attributes to query, can be a string, a list,
-                       or a dict
-        :type attrib: str or list or dictionary
-        :param id: The id of the object to act upon
-        :param op: An operation to perform on the queried data,
-                   e.g., EQ, SET, LT,..
-        :param attrop: Operation on multiple attributes, either
-                       PTL_AND, PTL_OR when an PTL_AND is used, only
-                       batch objects having all matches are
-                       returned, otherwise an OR is applied
-        :param attempt: The number of times this function has been
-                        called
-        :type attempt: int
-        :param max_attempts: The maximum number of attempts to
-                             perform
-        :type max_attempts: int or None
-        :param interval: The interval time between attempts.
-        :param count: If True, attrib will be accumulated using
-                      function counter
-        :type count: bool
-        :param extend: passed to the stat call
-        :param offset: the time to wait before the initial check.
-                       Defaults to 0.
-        :type offset: int
-        :param runas: query as a given user. Defaults to current
-                      user
-        :type runas: str or None
-        :param msg: Message from last call of this function, this
-                    message will be used while raising
-                    PtlExpectError.
-        :type msg: str or None
-        :param trigger_sched_cycle: True by default can be set to False if
-                          kicksched_action is not supposed to be called
-        :type trigger_sched_cycle: Boolean
-
-        :returns: True if attributes are as expected
-
-        :raises: PtlExpectError if attributes are not as expected
-        """
-
-        if attempt == 0 and offset > 0:
-            self.logger.log(level, self.logprefix + 'expect offset set to ' +
-                            str(offset))
-            time.sleep(offset)
-
-        if attrib is None:
-            attrib = {}
-
-        if ATTR_version in attrib and max_attempts is None:
-            max_attempts = 3
-
-        if max_attempts is None:
-            max_attempts = self.ptl_conf['max_attempts']
-
-        if interval is None:
-            interval = self.ptl_conf['attempt_interval']
-
-        if attempt >= max_attempts:
-            _msg = "expected on " + self.logprefix + msg
-            raise PtlExpectError(rc=1, rv=False, msg=_msg)
-
-        if obj_type == SERVER and id is None:
-            id = self.hostname
-
-        if isinstance(attrib, str):
-            attrib = {attrib: ''}
-        elif isinstance(attrib, list):
-            d = {}
-            for l in attrib:
-                d[l] = ''
-            attrib = d
-
-        # Add check for substate=42 for jobstate=R, if not added explicitly.
-        if obj_type == JOB:
-            add_attribs = {}
-            substate = False
-            for k, v in attrib.items():
-                if k == 'job_state' and ((isinstance(v, tuple) and
-                                          'R' in v[-1]) or v == 'R'):
-                    add_attribs['substate'] = 42
-                elif k == 'job_state=R':
-                    add_attribs['substate=42'] = v
-                elif 'substate' in k:
-                    substate = True
-            if add_attribs and not substate:
-                attrib.update(add_attribs)
-                attrop = PTL_AND
-            del add_attribs, substate
-
-        prefix = 'expect on ' + self.logprefix
-        msg = []
-        attrs_to_ignore = []
-        for k, v in attrib.items():
-            args = None
-            if isinstance(v, tuple):
-                operator = v[0]
-                if len(v) > 2:
-                    args = v[2:]
-                val = v[1]
-            else:
-                operator = op
-                val = v
-            if operator not in PTL_OP_TO_STR:
-                self.logger.log(level, "Operator not supported by expect(), "
-                                "cannot verify change in " + str(k))
-                attrs_to_ignore.append(k)
-                continue
-            msg += [k, PTL_OP_TO_STR[operator].strip()]
-            if isinstance(val, collections.Callable):
-                msg += ['callable(' + val.__name__ + ')']
-                if args is not None:
-                    msg.extend([str(x) for x in args])
-            else:
-                msg += [str(val)]
-            msg += [PTL_ATTROP_TO_STR[attrop]]
-
-        # Delete the attributes that we cannot verify
-        for k in attrs_to_ignore:
-            del(attrib[k])
-
-        if attrs_to_ignore and len(attrib) < 1 and op == SET:
-            return True
-
-        # remove the last converted PTL_ATTROP_TO_STR
-        if len(msg) > 1:
-            msg = msg[:-1]
-
-        if len(attrib) == 0:
-            msg += [PTL_OP_TO_STR[op]]
-
-        msg += [PBS_OBJ_MAP[obj_type]]
-        if id is not None:
-            msg += [str(id)]
-        if attempt > 0:
-            msg += ['attempt:', str(attempt + 1)]
-
-        # Default count to True if the attribute contains an '=' in its name
-        # for example 'job_state=R' implies that a count of job_state is needed
-        if count is None and self.utils.operator_in_attribute(attrib):
-            count = True
-
-        if count:
-            newattr = self.utils.convert_attributes_by_op(attrib)
-            if len(newattr) == 0:
-                newattr = attrib
-
-            statlist = [self.counter(obj_type, newattr, id, extend, op=op,
-                                     attrop=attrop, level=logging.DEBUG,
-                                     runas=runas)]
-        else:
-            try:
-                statlist = self.status(obj_type, attrib, id=id,
-                                       level=logging.DEBUG, extend=extend,
-                                       runas=runas, logerr=False)
-            except PbsStatusError:
-                statlist = []
-
-        if (statlist is None or len(statlist) == 0 or
-                statlist[0] is None or len(statlist[0]) == 0):
-            if op == UNSET or list(set(attrib.values())) == [0]:
-                self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
-                return True
-            else:
-                time.sleep(interval)
-                msg = " no data for " + " ".join(msg)
-                self.logger.log(level, prefix + msg)
-                return self.expect(obj_type, attrib, id, op, attrop,
-                                   attempt + 1, max_attempts, interval, count,
-                                   extend, level=level, msg=msg)
-        else:
-            if op == UNSET and obj_type in (SERVER, SCHED, NODE, HOOK, QUEUE):
-                for key in attrib.keys():
-                    if key in self.__special_attr_keys[obj_type]:
-                        val = self.get_special_attr_val(obj_type, key, id)
-                        attrib = {key: val}
-                        op = EQ
-                        return self.expect(obj_type, attrib, id, op, attrop,
-                                           attempt, max_attempts, interval,
-                                           count, extend, runas=runas,
-                                           level=level, msg=msg)
-
-        if attrib is None:
-            time.sleep(interval)
-            return self.expect(obj_type, attrib, id, op, attrop, attempt + 1,
-                               max_attempts, interval, count, extend,
-                               runas=runas, level=level, msg=" ".join(msg))
-        inp_op = op
-        for k, v in attrib.items():
-            varargs = None
-            if isinstance(v, tuple):
-                op = v[0]
-                if len(v) > 2:
-                    varargs = v[2:]
-                v = v[1]
-            else:
-                op = inp_op
-
-            for stat in statlist:
-                if k not in stat:
-                    if op == UNSET:
-                        continue
-
-                    # Sometimes users provide the wrong case for attributes
-                    # Convert to lowercase and compare
-                    attrs_lower = {
-                        ks.lower(): [ks, vs] for ks, vs in stat.items()}
-                    k_lower = k.lower()
-                    if k_lower not in attrs_lower:
-                        if (statlist.index(stat) + 1) < len(statlist):
-                            continue
-                        time.sleep(interval)
-                        _tsc = trigger_sched_cycle
-                        return self.expect(obj_type, attrib, id, op, attrop,
-                                           attempt + 1, max_attempts,
-                                           interval, count, extend,
-                                           level=level, msg=" ".join(msg),
-                                           trigger_sched_cycle=_tsc)
-                    stat_v = attrs_lower[k_lower][1]
-                    stat_k = attrs_lower[k_lower][0]
-                else:
-                    stat_v = stat[k]
-                    stat_k = k
-
-                if stat_k == ATTR_version:
-                    m = self.version_tag.match(stat_v)
-                    if m:
-                        stat_v = m.group('version')
-                    else:
-                        time.sleep(interval)
-                        return self.expect(obj_type, attrib, id, op, attrop,
-                                           attempt + 1, max_attempts, interval,
-                                           count, extend, runas=runas,
-                                           level=level, msg=" ".join(msg))
-
-                # functions/methods are invoked and their return value
-                # used on expect
-                if isinstance(v, collections.Callable):
-                    if varargs is not None:
-                        rv = v(stat_v, *varargs)
-                    else:
-                        rv = v(stat_v)
-                    if isinstance(rv, bool):
-                        if op == NOT:
-                            if not rv:
-                                continue
-                        if rv:
-                            continue
-                    else:
-                        v = rv
-
-                stat_v = PbsAttribute.decode_value(stat_v)
-                v = PbsAttribute.decode_value(str(v))
-
-                if stat_k == ATTR_version:
-                    stat_v = LooseVersion(str(stat_v))
-                    v = LooseVersion(str(v))
-
-                if op == EQ and stat_v == v:
-                    continue
-                elif op == SET and count and stat_v == v:
-                    continue
-                elif op == SET and count in (False, None):
-                    continue
-                elif op == NE and stat_v != v:
-                    continue
-                elif op == LT:
-                    if stat_v < v:
-                        continue
-                elif op == GT:
-                    if stat_v > v:
-                        continue
-                elif op == LE:
-                    if stat_v <= v:
-                        continue
-                elif op == GE:
-                    if stat_v >= v:
-                        continue
-                elif op == MATCH_RE:
-                    if re.search(str(v), str(stat_v)):
-                        continue
-                elif op == MATCH:
-                    if str(stat_v).find(str(v)) != -1:
-                        continue
-
-                msg += [' got: ' + stat_k + ' = ' + str(stat_v)]
-                self.logger.info(prefix + " ".join(msg))
-                time.sleep(interval)
-
-                # run custom actions defined for this object type
-                if trigger_sched_cycle and self.actions:
-                    for act_obj in self.actions.get_actions_by_type(obj_type):
-                        if act_obj.enabled:
-                            act_obj.action(self, obj_type, attrib, id, op,
-                                           attrop)
-                return self.expect(obj_type, attrib, id, op, attrop,
-                                   attempt + 1, max_attempts, interval, count,
-                                   extend, level=level, msg=" ".join(msg),
-                                   trigger_sched_cycle=trigger_sched_cycle)
-
-        self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
-        return True
-
+    
     def status(self, obj_type=SERVER, attrib=None, id=None,
                extend=None, level=logging.INFO, db_access=None, runas=None,
                resolve_indirectness=False, logerr=True):
@@ -1090,14 +817,11 @@ class Wrappers(PBSService):
         resv, sched]``.If the Server is setup from snap input,
         see snap or snapmap member, the status calls are routed
         directly to the data on files from snap.
-
         The server can be queried either through the 'qstat'
         command line tool or through the wrapped PBS IFL api,
         see set_op_mode.
-
         Return a dictionary representation of a batch status object
         raises ``PbsStatsuError on error``.
-
         :param obj_type: The type of object to query, one of the *
                          objects.Default: SERVER
         :param attrib: Attributes to query, can be a string, a
@@ -1120,7 +844,6 @@ class Wrappers(PBSService):
         :type resolve_indirectness: bool
         :param logerr: If True (default) logs run_cmd errors
         :type logerr: bool
-
         In addition to standard IFL stat call, this wrapper handles
         a few cases that aren't implicitly offered by pbs_stat*,
         those are for Hooks,Resources, and a formula evaluation.
@@ -1442,7 +1165,6 @@ class Wrappers(PBSService):
         """
         submit an ``interactive`` job. Returns a job identifier
         or raises PbsSubmitError on error
-
         :param cmd: The command to run to submit the interactive
                     job
         :type cmd: str
@@ -1872,7 +1594,7 @@ class Wrappers(PBSService):
             self._disconnect(c)
         if wait and id is not None:
             for oid in id:
-                self.expect(JOB, 'queue', id=oid, op=UNSET, runas=runas,
+                get_server_obj().expect(JOB, 'queue', id=oid, op=UNSET, runas=runas,
                             level=logging.DEBUG)
         return rc
 
@@ -1957,7 +1679,7 @@ class Wrappers(PBSService):
             self._disconnect(c)
         if wait and id is not None:
             for oid in id:
-                self.expect(RESV, 'queue', id=oid, op=UNSET, runas=runas,
+                get_server_obj().expect(RESV, 'queue', id=oid, op=UNSET, runas=runas,
                             level=logging.DEBUG)
         return rc
 
@@ -2019,7 +1741,7 @@ class Wrappers(PBSService):
 
         if wait:
             for oid in id:
-                self.expect(obj_type[oid], 'queue', id=oid, op=UNSET,
+                get_server_obj().expect(obj_type[oid], 'queue', id=oid, op=UNSET,
                             runas=runas, level=logging.DEBUG)
 
         return rc
@@ -2429,7 +2151,7 @@ class Wrappers(PBSService):
                     sname = id
 
                 # Default max cycle length is 1200 seconds (20m)
-                self.expect(SCHED, {'state': 'scheduling'}, op=NE, id=sname,
+                get_server_obj().expect(SCHED, {'state': 'scheduling'}, op=NE, id=sname,
                             interval=1, max_attempts=1200,
                             trigger_sched_cycle=False)
         return rc
@@ -2725,7 +2447,7 @@ class Wrappers(PBSService):
             if ret['err'] != ['']:
                 self.last_error = ret['err']
             if ret['out'] != ['']:
-                Wrappers.last_out = ret['out']
+                self.last_out = ret['out']
             self.last_rc = rc
         elif runas is not None:
             rc = self.pbs_api_as('alterresv', resvid, runas, data=attrib,

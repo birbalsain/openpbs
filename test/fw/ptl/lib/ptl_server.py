@@ -97,6 +97,12 @@ from ptl.lib.ptl_sched import Scheduler
 from ptl.lib.ptl_mom import MoM, get_mom_obj
 from ptl.lib.ptl_service import PBSService, PBSInitServices
 from ptl.lib.ptl_expect_action import ExpectActions
+def get_server_obj(name=None, attrs={}, defaults={}, pbsconf_file=None,
+                 snapmap={}, snap=None, client=None, client_pbsconf_file=None,
+                 db_access=None, stat=True):
+    return Server(name=name, attrs=attrs, defaults=defaults, pbsconf_file=pbsconf_file,
+                 snapmap=snapmap, snap=snap, client=client, client_pbsconf_file=client_pbsconf_file,
+                 db_access=db_access, stat=stat)
 from ptl.lib.ptl_wrappers import *
 
 
@@ -206,6 +212,7 @@ class Server(PBSService):
         self.default_queue = None
         self.last_error = []  # type: array. Set for CLI IFL errors. Not reset
         self.last_rc = None  # Set for CLI IFL return code. Not thread-safe
+        self.last_out = []
         self.moms = {}
 
         # default timeout on connect/disconnect set to 60s to mimick the qsub
@@ -272,6 +279,7 @@ class Server(PBSService):
                 self.default_queue = self.attributes[ATTR_dfltque]
 
             self.update_version_info()
+            self.pbs_version = self.attributes[ATTR_version]
 
     def wrappers(self):
         return Wrappers(self.jobs,
@@ -291,6 +299,7 @@ class Server(PBSService):
                         self.default_queue,
                         self.last_error,
                         self.last_rc,
+                        self.last_out,
                         self.moms,
                         self._conn_timeout,
                         self._conn_timer,
@@ -312,6 +321,45 @@ class Server(PBSService):
                         self.dflt_attributes,
                         self.get_op_mode(),
                         )
+
+    def update_wrapper_values(self, wrapper_values=[]):
+        self.jobs = wrapper_values[0]
+        self.shortname = wrapper_values[1]
+        self.hostname = wrapper_values[2]
+        self._is_local = wrapper_values[3]
+        self.dflt_sched_name = wrapper_values[4]
+        self.snapmap = wrapper_values[5]
+        self.nodes = wrapper_values[6]
+        self.reservations = wrapper_values[7]
+        self.queues = wrapper_values[8]
+        self.resources = wrapper_values[9]
+        self.hooks = wrapper_values[10]
+        self.pbshooks = wrapper_values[11]
+        self.entities = wrapper_values[12]
+        self.schedulers = wrapper_values[13]
+        self.default_queue = wrapper_values[14]
+        self.last_error = wrapper_values[15]
+        self.last_out = wrapper_values[16]
+        self.last_rc = wrapper_values[17]
+        self.moms = wrapper_values[18]
+        self._conn_timeout = wrapper_values[19]
+        self._conn_timer = wrapper_values[20]
+        self._conn = wrapper_values[21]
+        self._db_conn = wrapper_values[22]
+        self.current_user = wrapper_values[23]
+        self.pexpect_timeout = wrapper_values[24]
+        self.pexpect_sleep_time = wrapper_values[25]
+        self.logprefix = wrapper_values[26]
+        self.pi = wrapper_values[27]
+        self.actions = wrapper_values[28]
+        self.version_tag = wrapper_values[29]
+        self.__special_attr_keys = wrapper_values[30]
+        self.__special_attr = wrapper_values[31]
+        self.client = wrapper_values[32]
+        self.client_pbs_conf_file = wrapper_values[33]
+        self.client_conf = wrapper_values[34]
+        self.default_client_pbs_conf = wrapper_values[35]
+        self.dflt_ttributes = wrapper_values[36]
 
     def update_version_info(self):
         """
@@ -435,6 +483,7 @@ class Server(PBSService):
         wrapper = self.wrappers()
         if ((op_mode == PTL_API) and (self._conn is not None)):
             wrapper._disconnect(self._conn, force=True)
+            self.update_wrapper_values(wrapper.update_values())
         while i < max_attempts:
             rv = False
             try:
@@ -443,6 +492,7 @@ class Server(PBSService):
                 else:
                     c = wrapper._connect(self.hostname)
                     wrapper._disconnect(c, force=True)
+                    self.update_wrapper_values(wrapper.update_values())
                 return True
             except (PbsConnectError, PbsStatusError):
                 # if the status/connect operation fails then there might be
@@ -508,6 +558,7 @@ class Server(PBSService):
             rc = True
         wrapper = self.wrappers()
         wrapper._disconnect(self._conn, force=True)
+        self.update_wrapper_values(wrapper.update_values())
         return rc
 
     def restart(self):
@@ -580,23 +631,6 @@ class Server(PBSService):
         return self._log_match(self, msg, id, n, tail, allmatch, regexp,
                                max_attempts, interval, starttime, endtime,
                                level=level, existence=existence)
-
-    def pbs_version(self):
-        """
-        Get the version of the scheduler instance
-        """
-        if self.version:
-            return self.version
-
-        version = self.log_match('pbs_version', tail=False)
-        if version:
-            version = version[1].strip().split('=')[1]
-        else:
-            version = "unknown"
-
-        self.version = LooseVersion(version)
-
-        return self.version
 
     def revert_to_defaults(self, reverthooks=True, revertqueues=True,
                            revertresources=True, delhooks=True,
@@ -1652,7 +1686,7 @@ class Server(PBSService):
         """
         wrapper = self.wrappers()
         wrapper.logit('filter: ', obj_type, attrib, id)
-        return wrapper._filter(
+        return_value = wrapper._filter(
             obj_type,
             attrib,
             id,
@@ -1665,6 +1699,8 @@ class Server(PBSService):
             db_access,
             runas=runas,
             resolve_indirectness=resolve_indirectness)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def equivalence_classes(self, obj_type=None, attrib={}, bslist=None,
                             op=RESOURCES_AVAILABLE, show_zero_resources=True,
@@ -3208,140 +3244,467 @@ class Server(PBSService):
             if m is not None:
                 m = m.split('\n')
             return m
-
+ 
     def expect(self, obj_type, attrib=None, id=None, op=EQ, attrop=PTL_AND,
                attempt=0, max_attempts=None, interval=None, count=None,
                extend=None, offset=0, runas=None, level=logging.INFO,
                msg=None, trigger_sched_cycle=True):
-        wrapper = self.wrappers()
-        return wrapper.expect(
-            obj_type,
-            attrib,
-            id,
-            op,
-            attrop,
-            attempt,
-            max_attempts,
-            interval,
-            count,
-            extend,
-            offset,
-            runas,
-            level,
-            msg,
-            trigger_sched_cycle)
+        """
+        expect an attribute to match a given value as per an
+        operation.
+
+        :param obj_type: The type of object to query, JOB, SERVER,
+                         SCHEDULER, QUEUE, NODE
+        :type obj_type: str
+        :param attrib: Attributes to query, can be a string, a list,
+                       or a dict
+        :type attrib: str or list or dictionary
+        :param id: The id of the object to act upon
+        :param op: An operation to perform on the queried data,
+                   e.g., EQ, SET, LT,..
+        :param attrop: Operation on multiple attributes, either
+                       PTL_AND, PTL_OR when an PTL_AND is used, only
+                       batch objects having all matches are
+                       returned, otherwise an OR is applied
+        :param attempt: The number of times this function has been
+                        called
+        :type attempt: int
+        :param max_attempts: The maximum number of attempts to
+                             perform
+        :type max_attempts: int or None
+        :param interval: The interval time between attempts.
+        :param count: If True, attrib will be accumulated using
+                      function counter
+        :type count: bool
+        :param extend: passed to the stat call
+        :param offset: the time to wait before the initial check.
+                       Defaults to 0.
+        :type offset: int
+        :param runas: query as a given user. Defaults to current
+                      user
+        :type runas: str or None
+        :param msg: Message from last call of this function, this
+                    message will be used while raising
+                    PtlExpectError.
+        :type msg: str or None
+        :param trigger_sched_cycle: True by default can be set to False if
+                          kicksched_action is not supposed to be called
+        :type trigger_sched_cycle: Boolean
+
+        :returns: True if attributes are as expected
+
+        :raises: PtlExpectError if attributes are not as expected
+        """
+
+        if attempt == 0 and offset > 0:
+            self.logger.log(level, self.logprefix + 'expect offset set to ' +
+                            str(offset))
+            time.sleep(offset)
+
+        if attrib is None:
+            attrib = {}
+
+        if ATTR_version in attrib and max_attempts is None:
+            max_attempts = 3
+
+        if max_attempts is None:
+            max_attempts = self.ptl_conf['max_attempts']
+
+        if interval is None:
+            interval = self.ptl_conf['attempt_interval']
+
+        if attempt >= max_attempts:
+            _msg = "expected on " + self.logprefix + msg
+            raise PtlExpectError(rc=1, rv=False, msg=_msg)
+
+        if obj_type == SERVER and id is None:
+            id = self.hostname
+
+        if isinstance(attrib, str):
+            attrib = {attrib: ''}
+        elif isinstance(attrib, list):
+            d = {}
+            for l in attrib:
+                d[l] = ''
+            attrib = d
+
+        # Add check for substate=42 for jobstate=R, if not added explicitly.
+        if obj_type == JOB:
+            add_attribs = {}
+            substate = False
+            for k, v in attrib.items():
+                if k == 'job_state' and ((isinstance(v, tuple) and
+                                          'R' in v[-1]) or v == 'R'):
+                    add_attribs['substate'] = 42
+                elif k == 'job_state=R':
+                    add_attribs['substate=42'] = v
+                elif 'substate' in k:
+                    substate = True
+            if add_attribs and not substate:
+                attrib.update(add_attribs)
+                attrop = PTL_AND
+            del add_attribs, substate
+
+        prefix = 'expect on ' + self.logprefix
+        msg = []
+        attrs_to_ignore = []
+        for k, v in attrib.items():
+            args = None
+            if isinstance(v, tuple):
+                operator = v[0]
+                if len(v) > 2:
+                    args = v[2:]
+                val = v[1]
+            else:
+                operator = op
+                val = v
+            if operator not in PTL_OP_TO_STR:
+                self.logger.log(level, "Operator not supported by expect(), "
+                                "cannot verify change in " + str(k))
+                attrs_to_ignore.append(k)
+                continue
+            msg += [k, PTL_OP_TO_STR[operator].strip()]
+            if isinstance(val, collections.Callable):
+                msg += ['callable(' + val.__name__ + ')']
+                if args is not None:
+                    msg.extend([str(x) for x in args])
+            else:
+                msg += [str(val)]
+            msg += [PTL_ATTROP_TO_STR[attrop]]
+
+        # Delete the attributes that we cannot verify
+        for k in attrs_to_ignore:
+            del(attrib[k])
+
+        if attrs_to_ignore and len(attrib) < 1 and op == SET:
+            return True
+
+        # remove the last converted PTL_ATTROP_TO_STR
+        if len(msg) > 1:
+            msg = msg[:-1]
+
+        if len(attrib) == 0:
+            msg += [PTL_OP_TO_STR[op]]
+
+        msg += [PBS_OBJ_MAP[obj_type]]
+        if id is not None:
+            msg += [str(id)]
+        if attempt > 0:
+            msg += ['attempt:', str(attempt + 1)]
+
+        # Default count to True if the attribute contains an '=' in its name
+        # for example 'job_state=R' implies that a count of job_state is needed
+        if count is None and self.utils.operator_in_attribute(attrib):
+            count = True
+
+        if count:
+            newattr = self.utils.convert_attributes_by_op(attrib)
+            if len(newattr) == 0:
+                newattr = attrib
+
+            statlist = [self.counter(obj_type, newattr, id, extend, op=op,
+                                     attrop=attrop, level=logging.DEBUG,
+                                     runas=runas)]
+        else:
+            try:
+                statlist = self.status(obj_type, attrib, id=id,
+                                       level=logging.DEBUG, extend=extend,
+                                       runas=runas, logerr=False)
+            except PbsStatusError:
+                statlist = []
+
+        if (statlist is None or len(statlist) == 0 or
+                statlist[0] is None or len(statlist[0]) == 0):
+            if op == UNSET or list(set(attrib.values())) == [0]:
+                self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
+                return True
+            else:
+                time.sleep(interval)
+                msg = " no data for " + " ".join(msg)
+                self.logger.log(level, prefix + msg)
+                return self.expect(obj_type, attrib, id, op, attrop,
+                                   attempt + 1, max_attempts, interval, count,
+                                   extend, level=level, msg=msg)
+        else:
+            if op == UNSET and obj_type in (SERVER, SCHED, NODE, HOOK, QUEUE):
+                for key in attrib.keys():
+                    if key in self.__special_attr_keys[obj_type]:
+                        val = self.get_special_attr_val(obj_type, key, id)
+                        attrib = {key: val}
+                        op = EQ
+                        return self.expect(obj_type, attrib, id, op, attrop,
+                                           attempt, max_attempts, interval,
+                                           count, extend, runas=runas,
+                                           level=level, msg=msg)
+
+        if attrib is None:
+            time.sleep(interval)
+            return self.expect(obj_type, attrib, id, op, attrop, attempt + 1,
+                               max_attempts, interval, count, extend,
+                               runas=runas, level=level, msg=" ".join(msg))
+        inp_op = op
+        for k, v in attrib.items():
+            varargs = None
+            if isinstance(v, tuple):
+                op = v[0]
+                if len(v) > 2:
+                    varargs = v[2:]
+                v = v[1]
+            else:
+                op = inp_op
+
+            for stat in statlist:
+                if k not in stat:
+                    if op == UNSET:
+                        continue
+
+                    # Sometimes users provide the wrong case for attributes
+                    # Convert to lowercase and compare
+                    attrs_lower = {
+                        ks.lower(): [ks, vs] for ks, vs in stat.items()}
+                    k_lower = k.lower()
+                    if k_lower not in attrs_lower:
+                        if (statlist.index(stat) + 1) < len(statlist):
+                            continue
+                        time.sleep(interval)
+                        _tsc = trigger_sched_cycle
+                        return self.expect(obj_type, attrib, id, op, attrop,
+                                           attempt + 1, max_attempts,
+                                           interval, count, extend,
+                                           level=level, msg=" ".join(msg),
+                                           trigger_sched_cycle=_tsc)
+                    stat_v = attrs_lower[k_lower][1]
+                    stat_k = attrs_lower[k_lower][0]
+                else:
+                    stat_v = stat[k]
+                    stat_k = k
+
+                if stat_k == ATTR_version:
+                    m = self.version_tag.match(stat_v)
+                    if m:
+                        stat_v = m.group('version')
+                    else:
+                        time.sleep(interval)
+                        return self.expect(obj_type, attrib, id, op, attrop,
+                                           attempt + 1, max_attempts, interval,
+                                           count, extend, runas=runas,
+                                           level=level, msg=" ".join(msg))
+
+                # functions/methods are invoked and their return value
+                # used on expect
+                if isinstance(v, collections.Callable):
+                    if varargs is not None:
+                        rv = v(stat_v, *varargs)
+                    else:
+                        rv = v(stat_v)
+                    if isinstance(rv, bool):
+                        if op == NOT:
+                            if not rv:
+                                continue
+                        if rv:
+                            continue
+                    else:
+                        v = rv
+
+                stat_v = PbsAttribute.decode_value(stat_v)
+                v = PbsAttribute.decode_value(str(v))
+
+                if stat_k == ATTR_version:
+                    stat_v = LooseVersion(str(stat_v))
+                    v = LooseVersion(str(v))
+
+                if op == EQ and stat_v == v:
+                    continue
+                elif op == SET and count and stat_v == v:
+                    continue
+                elif op == SET and count in (False, None):
+                    continue
+                elif op == NE and stat_v != v:
+                    continue
+                elif op == LT:
+                    if stat_v < v:
+                        continue
+                elif op == GT:
+                    if stat_v > v:
+                        continue
+                elif op == LE:
+                    if stat_v <= v:
+                        continue
+                elif op == GE:
+                    if stat_v >= v:
+                        continue
+                elif op == MATCH_RE:
+                    if re.search(str(v), str(stat_v)):
+                        continue
+                elif op == MATCH:
+                    if str(stat_v).find(str(v)) != -1:
+                        continue
+
+                msg += [' got: ' + stat_k + ' = ' + str(stat_v)]
+                self.logger.info(prefix + " ".join(msg))
+                time.sleep(interval)
+
+                # run custom actions defined for this object type
+                if trigger_sched_cycle and self.actions:
+                    for act_obj in self.actions.get_actions_by_type(obj_type):
+                        if act_obj.enabled:
+                            act_obj.action(self, obj_type, attrib, id, op,
+                                           attrop)
+                return self.expect(obj_type, attrib, id, op, attrop,
+                                   attempt + 1, max_attempts, interval, count,
+                                   extend, level=level, msg=" ".join(msg),
+                                   trigger_sched_cycle=trigger_sched_cycle)
+
+        self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
+        return True
 
     def status(self, obj_type=SERVER, attrib=None, id=None,
                extend=None, level=logging.INFO, db_access=None, runas=None,
                resolve_indirectness=False, logerr=True):
         wrapper = self.wrappers()
-        return wrapper.status(obj_type, attrib, id,
+        return_value = wrapper.status(obj_type, attrib, id,
                               extend, level, db_access, runas,
                               resolve_indirectness, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def submit_interactive_job(self, job, cmd):
         wrapper = self.wrappers()
-        return wrapper.submit_interactive_job(job, cmd)
+        return_value = wrapper.submit_interactive_job(job, cmd)
 
     def submit(self, obj, script=None, extend=None, submit_dir=None,
                env=None):
         wrapper = self.wrappers()
-        return wrapper.submit(obj, script, extend, submit_dir,
+        return_value = wrapper.submit(obj, script, extend, submit_dir,
                               env)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def deljob(self, id=None, extend=None, runas=None, wait=False,
                logerr=True, attr_W=None):
         wrapper = self.wrappers()
-        return wrapper.deljob(id, extend, runas, wait,
+        return_value = wrapper.deljob(id, extend, runas, wait,
                               logerr, attr_W)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def delresv(self, id=None, extend=None, runas=None, wait=False,
                 logerr=True):
         wrapper = self.wrappers()
-        return wrapper.delresv(id, extend, runas, wait,
+        return_value = wrapper.delresv(id, extend, runas, wait,
                                logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def delete(self, id=None, extend=None, runas=None, wait=False,
                logerr=True):
         wrapper = self.wrappers()
-        return wrapper.delete(id, extend, runas, wait,
+        return_value = wrapper.delete(id, extend, runas, wait,
                               logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def select(self, attrib=None, extend=None, runas=None, logerr=True):
         wrapper = self.wrappers()
-        return wrapper.select(attrib, extend, runas, logerr)
+        return_value = wrapper.select(attrib, extend, runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def selstat(self, select_list, rattrib, runas=None, extend=None):
         wrapper = self.wrappers()
-        return wrapper.selstat(select_list, rattrib, runas, extend)
+        return_value = wrapper.selstat(select_list, rattrib, runas, extend)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def manager(self, cmd, obj_type, attrib=None, id=None, extend=None,
                 level=logging.INFO, sudo=None, runas=None, logerr=True):
         wrapper = self.wrappers()
-        return wrapper.manager(cmd, obj_type, attrib, id, extend,
+        return_value = wrapper.manager(cmd, obj_type, attrib, id, extend,
                                level, sudo, runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def sigjob(self, jobid=None, signal=None, extend=None, runas=None,
                logerr=True):
         wrapper = self.wrappers()
-        return wrapper.sigjob(jobid, signal, extend, runas,
+        return_value = wrapper.sigjob(jobid, signal, extend, runas,
                               logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def msgjob(self, jobid=None, to_file=None, msg=None, extend=None,
                runas=None, logerr=True):
         wrapper = self.wrappers()
-        return wrapper.msgjob(jobid, to_file, msg, extend,
+        return_value = wrapper.msgjob(jobid, to_file, msg, extend,
                               runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def alterjob(self, jobid=None, attrib=None, extend=None, runas=None,
                  logerr=True):
         wrapper = self.wrappers()
-        return wrapper.alterjob(jobid, attrib, extend, runas,
+        return_value = wrapper.alterjob(jobid, attrib, extend, runas,
                                 logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def alterresv(self, resvid, attrib, extend=None, runas=None,
                   logerr=True):
         wrapper = self.wrappers()
-        return wrapper.alterresv(resvid, attrib, extend, runas, logerr)
+        return_value = wrapper.alterresv(resvid, attrib, extend, runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def holdjob(self, jobid=None, holdtype=None, extend=None, runas=None,
                 logerr=True):
         wrapper = self.wrappers()
-        return wrapper.holdjob(jobid, holdtype, extend, runas,
+        return_value = wrapper.holdjob(jobid, holdtype, extend, runas,
                                logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def rlsjob(self, jobid, holdtype, extend=None, runas=None, logerr=True):
         wrapper = self.wrappers()
-        return wrapper.rlsjob(jobid, holdtype, extend, runas, logerr)
+        return_value = wrapper.rlsjob(jobid, holdtype, extend, runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def rerunjob(self, jobid=None, extend=None, runas=None, logerr=True):
         wrapper = self.wrappers()
-        return wrapper.rerunjob(jobid, extend, runas, logerr)
+        return_value = wrapper.rerunjob(jobid, extend, runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def orderjob(self, jobid1=None, jobid2=None, extend=None, runas=None,
                  logerr=True):
         wrapper = self.wrappers()
-        return wrapper.orderjob(jobid1, jobid2, extend, runas,
+        return_value = wrapper.orderjob(jobid1, jobid2, extend, runas,
                                 logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def runjob(self, jobid=None, location=None, run_async=False, extend=None,
                runas=None, logerr=False):
         wrapper = self.wrappers()
-        return wrapper.runjob(jobid, location, run_async, extend,
+        return_value = wrapper.runjob(jobid, location, run_async, extend,
                               runas, logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def movejob(self, jobid=None, destination=None, extend=None, runas=None,
                 logerr=True):
         wrapper = self.wrappers()
-        return wrapper.movejob(jobid, destination, extend, runas,
+        return_value = wrapper.movejob(jobid, destination, extend, runas,
                                logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def counter(self, obj_type=None, attrib=None, id=None, extend=None,
                 op=None, attrop=None, bslist=None, level=logging.INFO,
                 idonly=True, grandtotal=False, db_access=None, runas=None,
                 resolve_indirectness=False):
         wrapper = self.wrappers()
-        return wrapper.counter(
+        return_value = wrapper.counter(
             obj_type,
             attrib,
             id,
@@ -3355,13 +3718,19 @@ class Server(PBSService):
             db_access,
             runas,
             resolve_indirectness)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def qterm(self, manner=None, extend=None, server_name=None, runas=None,
               logerr=True):
         wrapper = self.wrappers()
-        return wrapper.qterm(manner, extend, server_name, runas,
+        return_value = wrapper.qterm(manner, extend, server_name, runas,
                              logerr)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
 
     def update_special_attr(self, obj_type, id=None):
         wrapper = self.wrappers()
-        return wrapper.update_special_attr(obj_type, id)
+        return_value = wrapper.update_special_attr(obj_type, id)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value

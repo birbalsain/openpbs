@@ -393,7 +393,7 @@ class TestPbsResvAlter(TestFunctional):
 
             self.server.alterresv(r, attrs, extend=extend, runas=runas)
 
-            self.assertEqual(msg, Wrappers.last_out[0])
+            self.assertEqual(msg, self.server.last_out[0])
             self.logger.info(msg + " displayed")
 
             if check_log:
@@ -2646,7 +2646,7 @@ class TestPbsResvAlter(TestFunctional):
 
         self.server.alterresv(rid, attrs, extend='force')
         msg = "pbs_ralter: " + rid + " CONFIRMED"
-        self.assertEqual(msg, Wrappers.last_out[0])
+        self.assertEqual(msg, self.server.last_out[0])
 
         t_duration, t_start, t_end = self.get_resv_time_info(rid)
         self.assertEqual(int(t_start), new_start)
@@ -2660,7 +2660,7 @@ class TestPbsResvAlter(TestFunctional):
         attrs['interactive'] = 10
         self.server.alterresv(rid, attrs, extend='force')
         msg = "pbs_ralter: " + rid + " CONFIRMED"
-        self.assertEqual(msg, Wrappers.last_out[0])
+        self.assertEqual(msg, self.server.last_out[0])
 
         _, _, t_end = self.get_resv_time_info(rid)
         self.assertEqual(int(t_end), new_end)
