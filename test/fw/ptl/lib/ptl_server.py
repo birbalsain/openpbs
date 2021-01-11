@@ -97,12 +97,6 @@ from ptl.lib.ptl_sched import Scheduler
 from ptl.lib.ptl_mom import MoM, get_mom_obj
 from ptl.lib.ptl_service import PBSService, PBSInitServices
 from ptl.lib.ptl_expect_action import ExpectActions
-def get_server_obj(name=None, attrs={}, defaults={}, pbsconf_file=None,
-                 snapmap={}, snap=None, client=None, client_pbsconf_file=None,
-                 db_access=None, stat=True):
-    return Server(name=name, attrs=attrs, defaults=defaults, pbsconf_file=pbsconf_file,
-                 snapmap=snapmap, snap=snap, client=client, client_pbsconf_file=client_pbsconf_file,
-                 db_access=db_access, stat=stat)
 from ptl.lib.ptl_wrappers import *
 
 
@@ -110,16 +104,13 @@ class Server(PBSService):
 
     """
     PBS server ``configuration`` and ``control``
-
     The Server class is a container to PBS server attributes
     and implements wrappers to the ``IFL API`` to perform
     operations on the server. For example to submit, status,
     delete, manage, etc... jobs, reservations and configurations.
-
     This class also offers higher-level routines to ease testing,
     see functions, for ``example: revert_to_defaults,
     init_logging, expect, counter.``
-
     :param name: The hostname of the server. Defaults to
                  calling pbs_default()
     :type name: str
@@ -378,7 +369,6 @@ class Server(PBSService):
     def set_client(self, name=None):
         """
         Set server client
-
         :param name: Client name
         :type name: str
         """
@@ -390,7 +380,6 @@ class Server(PBSService):
     def set_connect_timeout(self, timeout=0):
         """
         Set server connection timeout
-
         :param timeout: Timeout value
         :type timeout: int
         """
@@ -415,7 +404,6 @@ class Server(PBSService):
         appropriate SWIG wrappers, the library will fall back to
         ``CLI``, or if requesting ``PTL_CLI`` and there is no
         ``PBS_EXEC`` on the system, None is returned.
-
         :param mode: Operating mode
         :type mode: str
         """
@@ -447,7 +435,6 @@ class Server(PBSService):
         Add an action handler to expect. Expect Actions are
         custom handlers that are triggered when an unexpected
         value is encountered
-
         :param name: Action name
         :type name: str or None
         :param action: Action to add
@@ -463,7 +450,6 @@ class Server(PBSService):
     def set_attributes(self, a={}):
         """
         set server attributes
-
         :param a: Attribute dictionary
         :type a: Dictionary
         """
@@ -514,7 +500,6 @@ class Server(PBSService):
     def start(self, args=None, launcher=None):
         """
         Start the PBS server
-
         :param args: Argument required to start the server
         :type args: str
         :param launcher: Optional utility to invoke the launch of the service
@@ -540,7 +525,6 @@ class Server(PBSService):
     def stop(self, sig=None):
         """
         Stop the PBS server
-
         :param sig: Signal to stop PBS server
         :type sig: str
         """
@@ -576,7 +560,6 @@ class Server(PBSService):
                   existence=True):
         """
         Match given ``msg`` in given ``n`` lines of Server log
-
         :param msg: log message to match, can be regex also when
                     ``regexp`` is True
         :type msg: str
@@ -613,7 +596,6 @@ class Server(PBSService):
                         given msg, else check for non-existence of
                         given msg.
         :type existence: bool
-
         :return: (x,y) where x is the matching line
                  number and y the line itself. If allmatch is True,
                  a list of tuples is returned.
@@ -624,7 +606,6 @@ class Server(PBSService):
                 Or
                 When ``existence`` is False and given
                 ``msg`` found in ``n`` line.
-
         .. note:: The matching line number is relative to the record
                   number, not the absolute line number in the file.
         """
@@ -638,7 +619,6 @@ class Server(PBSService):
                            server_stat=None):
         """
         reset server attributes back to out of box defaults.
-
         :param reverthooks: If True disable all hooks. Defaults
                             to True
         :type reverthooks: bool
@@ -872,15 +852,10 @@ class Server(PBSService):
     def save_configuration(self, outfile=None, mode='w'):
         """
         Save a server configuration, this includes:
-
           - ``server_priv/resourcedef``
-
           - ``qmgr -c "print server"``
-
           - ``qmgr -c "print sched"``
-
           - ``qmgr -c "print hook"``
-
         :param outfile: the output file to which onfiguration is
                         saved
         :type outfile: str
@@ -1022,7 +997,6 @@ class Server(PBSService):
         Get the server host name from the database. The server
         host name is stored in the pbs.server table and not in
         pbs.server_attr.
-
         :param cur: Optional, a predefined cursor to use to
                     operate on the DB
         :param db_acccess: set to either file containing
@@ -1057,7 +1031,6 @@ class Server(PBSService):
                   logerr=True):
         """
         Status PBS objects from the SQL database
-
         :param obj_type: The type of object to query, one of the
                          * objects, Default: SERVER
         :param attrib: Attributes to query, can a string, a list,
@@ -1170,7 +1143,6 @@ class Server(PBSService):
     def qdisable(self, queue=None, runas=None, logerr=True):
         """
         Disable queue. ``CLI`` mode only
-
         :param queue: The name of the queue or list of queue to
                       disable
         :type queue: str or list
@@ -1217,7 +1189,6 @@ class Server(PBSService):
     def qenable(self, queue=None, runas=None, logerr=True):
         """
         Enable queue. ``CLI`` mode only
-
         :param queue: The name of the queue or list of queue to
                       enable
         :type queue: str or list
@@ -1264,7 +1235,6 @@ class Server(PBSService):
     def qstart(self, queue=None, runas=None, logerr=True):
         """
         Start queue. ``CLI`` mode only
-
         :param queue: The name of the queue or list of queue
                       to start
         :type queue: str or list
@@ -1311,7 +1281,6 @@ class Server(PBSService):
     def qstop(self, queue=None, runas=None, logerr=True):
         """
         Stop queue. ``CLI`` mode only
-
         :param queue: The name of the queue or list of queue to stop
         :type queue: str or list
         :param runas: Optional name of user to run command as
@@ -1358,7 +1327,6 @@ class Server(PBSService):
         """
         Parse server resources as defined in the resourcedef file
         Populates instance variable self.resources
-
         :returns: The resources as a dictionary
         """
         if not self.has_snap:
@@ -1368,7 +1336,6 @@ class Server(PBSService):
     def remove_resource(self, name):
         """
         Remove an entry from resourcedef
-
         :param name: The name of the resource to remove
         :type name: str
         :param restart: Whether to restart the server or not.
@@ -1391,7 +1358,6 @@ class Server(PBSService):
     def add_resource(self, name, type=None, flag=None):
         """
         Define a server resource
-
         :param name: The name of the resource to add to the
                      resourcedef file
         :type name: str
@@ -1452,7 +1418,6 @@ class Server(PBSService):
     def write_resourcedef(self, resources=None, filename=None, restart=True):
         """
         Write into resource def file
-
         :param resources: PBS resources
         :type resources: dictionary
         :param filename: resourcedef file name
@@ -1487,7 +1452,6 @@ class Server(PBSService):
         """
         Parse an arbitrary resource definition file passed as
         input and return a dictionary of resources
-
         :param file: resource definition file
         :type file: str or None
         :returns: Dictionary of resource
@@ -1649,18 +1613,15 @@ class Server(PBSService):
         """
         Filter objects by properties. For example, to filter all
         free nodes:``server.filter(VNODE,{'state':'free'})``
-
         For each attribute queried, if idonly is True, a list of
         matching object names is returned; if idonly is False, then
         the value of each attribute queried is returned.
-
         This is unlike Python's built-in 'filter' that returns a
         subset of objects matching from a pool of objects. The
         Python filtering mechanism remains very useful in some
         situations and should be used programmatically to achieve
         desired filtering goals that can not be met easily with
         PTL's filter method.
-
         :param obj_type: The type of object to query, one of the
                          * objects
         :param attrib: Attributes to query, can be a string, a
@@ -1820,7 +1781,6 @@ class Server(PBSService):
                                  resolve_indirectness=False):
         """
         helper function to show the equivalence classes
-
         :param eq: equivalence classes as compute by
                    equivalence_classes see equivalence_classes
                    for remaining parameters description
@@ -1844,7 +1804,6 @@ class Server(PBSService):
         """
         Returns what's available as a list of node equivalence
         classes listed by availability over time.
-
         :param attrib: attributes to consider
         :type attrib: List
         :param jobs: jobs to consider, if None, jobs are queried
@@ -1993,7 +1952,6 @@ class Server(PBSService):
         """
         helper function to show availability as computed by
         whats_available
-
         :param wa: a dictionary of available attributes. see
                    whats_available for a\
                    description of the remaining parameters
@@ -2013,7 +1971,6 @@ class Server(PBSService):
         """
         Return utilization of consumable resources on a set of
         nodes
-
         :param nodes: A list of dictionary of nodes on which to
                       compute utilization.Defaults to nodes
                       resulting from a stat call to the current
@@ -2027,10 +1984,8 @@ class Server(PBSService):
                        compute utilization of,
                        ``e.g. {'user':u1, 'group':g1, 'project'=p1}``
         :type entity: Dictionary
-
         The utilization is returned as a dictionary of percentage
         utilization for each resource.
-
         Non-consumable resources are silently ignored.
         """
         if nodes is None:
@@ -2134,7 +2089,6 @@ class Server(PBSService):
         Create MoM configurations and optionall add them to the
         server. Unique ``pbs.conf`` files are defined and created
         on each hosts on which MoMs are to be created.
-
         :param name: Optional prefix name of the nodes to create.
                      Defaults to the name of the MoM host.
         :type name: str or None
@@ -2164,7 +2118,6 @@ class Server(PBSService):
         :param step_port: The increments at which ports are
                           allocated. Defaults to 2.
         :type step_port: int
-
         .. note:: Since PBS requires that
                   PBS_MANAGER_SERVICE_PORT = PBS_MOM_SERVICE_PORT+1
                   The step number must be greater or equal to 2.
@@ -2247,7 +2200,6 @@ class Server(PBSService):
     def create_hook(self, name, attrs):
         """
         Helper function to create a hook by name.
-
         :param name: The name of the hook to create
         :type name: str
         :param attrs: The attributes to create the hook with.
@@ -2269,7 +2221,6 @@ class Server(PBSService):
     def delete_hook(self, name):
         """
         Helper function to delete a hook by name.
-
         :param name: The name of the hook to delete
         :type name: str
         :returns: False if hook does not exist
@@ -2287,7 +2238,6 @@ class Server(PBSService):
         Helper function to import hook body into hook by name.
         The hook must have been created prior to calling this
         function.
-
         :param name: The name of the hook to import body to
         :type name: str
         :param body: The body of the hook as a string.
@@ -2332,7 +2282,6 @@ class Server(PBSService):
         """
         Helper function to create a hook, import content into it,
         set the event and enable it.
-
         :param name: The name of the hook to create
         :type name: str
         :param attrs: The attributes to create the hook with.
@@ -2413,7 +2362,6 @@ class Server(PBSService):
         Helper function to import hook config body into hook by name.
         The hook must have been created prior to calling this
         function.
-
         :param hook_name: The name of the hook to import hook config
         :type name: str
         :param hook_conf: The body of the hook config as a dict.
@@ -2460,7 +2408,6 @@ class Server(PBSService):
         Helper function to export hook config body.
         The hook must have been created prior to calling this
         function.
-
         :param hook_name: The name of the hook to export config from
         :type name: str
         :param hook_type: The hook type "site" or "pbshook"
@@ -2492,7 +2439,6 @@ class Server(PBSService):
                          include_running_jobs=False, exclude_subjobs=True):
         """
         Evaluate the job sort formula
-
         :param jobid: If set, evaluate the formula for the given
                       jobid, if not set,formula is evaluated for
                       all jobs in state Q
@@ -2616,7 +2562,6 @@ class Server(PBSService):
         """
         Helper function to parse limits syntax on a given
         container.
-
         :param container: The PBS object to query, one of ``QUEUE``
                           or ``SERVER``.Metascheduling node group
                           limits are not yet queri-able
@@ -2680,7 +2625,6 @@ class Server(PBSService):
     def parse_server_limits(self, server=None, db_access=None):
         """
         Parse all server limits
-
         :param server: list of dictionary of server data
         :type server: List
         :param db_acccess: set to either file containing credentials
@@ -2693,7 +2637,6 @@ class Server(PBSService):
     def parse_queue_limits(self, queues=None, id=None, db_access=None):
         """
         Parse queue limits
-
         :param queues: list of dictionary of queue data
         :type queues: List
         :param id: The id of the queue to parse limit for. If None,
@@ -2708,7 +2651,6 @@ class Server(PBSService):
     def parse_all_limits(self, server=None, queues=None, db_access=None):
         """
         Parse all server and queue limits
-
         :param server: list of dictionary of server data
         :type server: List
         :param queues: list of dictionary of queue data
@@ -2733,7 +2675,6 @@ class Server(PBSService):
         """
         Collect limit information for each entity on which a
         ``server/queue`` limit is applied.
-
         :param etype: entity type, one of u, g, p, o
         :type etype: str or None
         :param ename: entity name
@@ -2761,7 +2702,6 @@ class Server(PBSService):
         def create_linfo(lim, entity_type, id, used):
             """
             Create limit information
-
             :param lim: Limit to apply
             :param entity_type: Type of entity
             """
@@ -2783,7 +2723,6 @@ class Server(PBSService):
         def calc_usage(jobs, attr, name=None, resource=None):
             """
             Calculate the usage for the entity
-
             :param attr: Job attribute
             :param name: Entity name
             :type name: str or None
@@ -2908,7 +2847,6 @@ class Server(PBSService):
         into entries in the PBS database that can be recovered
         upon server restart if all other ``objects``, ``queues``,
         ``resources``, etc... are already defined.
-
         The interface to PBS used in this method is incomplete
         and will most likely cause serious issues. Use only for
         development purposes
@@ -3021,9 +2959,7 @@ class Server(PBSService):
         """
         Mimic a ``pbs_snapshot`` snapshot onto a set of hosts running
         a PBS ``server``,``scheduler``, and ``MoM``.
-
         This method clones the following information from the snap:
-
         ``Server attributes``
         ``Server resourcedef``
         ``Hooks``
@@ -3031,16 +2967,12 @@ class Server(PBSService):
         ``Scheduler resource_group``
         ``Scheduler holiday file``
         ``Per Queue attributes``
-
         Nodes are copied as a vnode definition file inserted into
         each host's MoM instance.
-
         Currently no support for cloning the server 'sched' object,
         nor to copy nodes to multi-mom instances.
-
         Jobs are copied over only if import_jobs is True, see below
         for details
-
         :param conf_file: Configuration file for the MoM instance
         :param hosts: List of hosts on which to clone the snap
                       snapshot
@@ -3244,320 +3176,31 @@ class Server(PBSService):
             if m is not None:
                 m = m.split('\n')
             return m
- 
+  
     def expect(self, obj_type, attrib=None, id=None, op=EQ, attrop=PTL_AND,
                attempt=0, max_attempts=None, interval=None, count=None,
                extend=None, offset=0, runas=None, level=logging.INFO,
                msg=None, trigger_sched_cycle=True):
-        """
-        expect an attribute to match a given value as per an
-        operation.
-
-        :param obj_type: The type of object to query, JOB, SERVER,
-                         SCHEDULER, QUEUE, NODE
-        :type obj_type: str
-        :param attrib: Attributes to query, can be a string, a list,
-                       or a dict
-        :type attrib: str or list or dictionary
-        :param id: The id of the object to act upon
-        :param op: An operation to perform on the queried data,
-                   e.g., EQ, SET, LT,..
-        :param attrop: Operation on multiple attributes, either
-                       PTL_AND, PTL_OR when an PTL_AND is used, only
-                       batch objects having all matches are
-                       returned, otherwise an OR is applied
-        :param attempt: The number of times this function has been
-                        called
-        :type attempt: int
-        :param max_attempts: The maximum number of attempts to
-                             perform
-        :type max_attempts: int or None
-        :param interval: The interval time between attempts.
-        :param count: If True, attrib will be accumulated using
-                      function counter
-        :type count: bool
-        :param extend: passed to the stat call
-        :param offset: the time to wait before the initial check.
-                       Defaults to 0.
-        :type offset: int
-        :param runas: query as a given user. Defaults to current
-                      user
-        :type runas: str or None
-        :param msg: Message from last call of this function, this
-                    message will be used while raising
-                    PtlExpectError.
-        :type msg: str or None
-        :param trigger_sched_cycle: True by default can be set to False if
-                          kicksched_action is not supposed to be called
-        :type trigger_sched_cycle: Boolean
-
-        :returns: True if attributes are as expected
-
-        :raises: PtlExpectError if attributes are not as expected
-        """
-
-        if attempt == 0 and offset > 0:
-            self.logger.log(level, self.logprefix + 'expect offset set to ' +
-                            str(offset))
-            time.sleep(offset)
-
-        if attrib is None:
-            attrib = {}
-
-        if ATTR_version in attrib and max_attempts is None:
-            max_attempts = 3
-
-        if max_attempts is None:
-            max_attempts = self.ptl_conf['max_attempts']
-
-        if interval is None:
-            interval = self.ptl_conf['attempt_interval']
-
-        if attempt >= max_attempts:
-            _msg = "expected on " + self.logprefix + msg
-            raise PtlExpectError(rc=1, rv=False, msg=_msg)
-
-        if obj_type == SERVER and id is None:
-            id = self.hostname
-
-        if isinstance(attrib, str):
-            attrib = {attrib: ''}
-        elif isinstance(attrib, list):
-            d = {}
-            for l in attrib:
-                d[l] = ''
-            attrib = d
-
-        # Add check for substate=42 for jobstate=R, if not added explicitly.
-        if obj_type == JOB:
-            add_attribs = {}
-            substate = False
-            for k, v in attrib.items():
-                if k == 'job_state' and ((isinstance(v, tuple) and
-                                          'R' in v[-1]) or v == 'R'):
-                    add_attribs['substate'] = 42
-                elif k == 'job_state=R':
-                    add_attribs['substate=42'] = v
-                elif 'substate' in k:
-                    substate = True
-            if add_attribs and not substate:
-                attrib.update(add_attribs)
-                attrop = PTL_AND
-            del add_attribs, substate
-
-        prefix = 'expect on ' + self.logprefix
-        msg = []
-        attrs_to_ignore = []
-        for k, v in attrib.items():
-            args = None
-            if isinstance(v, tuple):
-                operator = v[0]
-                if len(v) > 2:
-                    args = v[2:]
-                val = v[1]
-            else:
-                operator = op
-                val = v
-            if operator not in PTL_OP_TO_STR:
-                self.logger.log(level, "Operator not supported by expect(), "
-                                "cannot verify change in " + str(k))
-                attrs_to_ignore.append(k)
-                continue
-            msg += [k, PTL_OP_TO_STR[operator].strip()]
-            if isinstance(val, collections.Callable):
-                msg += ['callable(' + val.__name__ + ')']
-                if args is not None:
-                    msg.extend([str(x) for x in args])
-            else:
-                msg += [str(val)]
-            msg += [PTL_ATTROP_TO_STR[attrop]]
-
-        # Delete the attributes that we cannot verify
-        for k in attrs_to_ignore:
-            del(attrib[k])
-
-        if attrs_to_ignore and len(attrib) < 1 and op == SET:
-            return True
-
-        # remove the last converted PTL_ATTROP_TO_STR
-        if len(msg) > 1:
-            msg = msg[:-1]
-
-        if len(attrib) == 0:
-            msg += [PTL_OP_TO_STR[op]]
-
-        msg += [PBS_OBJ_MAP[obj_type]]
-        if id is not None:
-            msg += [str(id)]
-        if attempt > 0:
-            msg += ['attempt:', str(attempt + 1)]
-
-        # Default count to True if the attribute contains an '=' in its name
-        # for example 'job_state=R' implies that a count of job_state is needed
-        if count is None and self.utils.operator_in_attribute(attrib):
-            count = True
-
-        if count:
-            newattr = self.utils.convert_attributes_by_op(attrib)
-            if len(newattr) == 0:
-                newattr = attrib
-
-            statlist = [self.counter(obj_type, newattr, id, extend, op=op,
-                                     attrop=attrop, level=logging.DEBUG,
-                                     runas=runas)]
-        else:
-            try:
-                statlist = self.status(obj_type, attrib, id=id,
-                                       level=logging.DEBUG, extend=extend,
-                                       runas=runas, logerr=False)
-            except PbsStatusError:
-                statlist = []
-
-        if (statlist is None or len(statlist) == 0 or
-                statlist[0] is None or len(statlist[0]) == 0):
-            if op == UNSET or list(set(attrib.values())) == [0]:
-                self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
-                return True
-            else:
-                time.sleep(interval)
-                msg = " no data for " + " ".join(msg)
-                self.logger.log(level, prefix + msg)
-                return self.expect(obj_type, attrib, id, op, attrop,
-                                   attempt + 1, max_attempts, interval, count,
-                                   extend, level=level, msg=msg)
-        else:
-            if op == UNSET and obj_type in (SERVER, SCHED, NODE, HOOK, QUEUE):
-                for key in attrib.keys():
-                    if key in self.__special_attr_keys[obj_type]:
-                        val = self.get_special_attr_val(obj_type, key, id)
-                        attrib = {key: val}
-                        op = EQ
-                        return self.expect(obj_type, attrib, id, op, attrop,
-                                           attempt, max_attempts, interval,
-                                           count, extend, runas=runas,
-                                           level=level, msg=msg)
-
-        if attrib is None:
-            time.sleep(interval)
-            return self.expect(obj_type, attrib, id, op, attrop, attempt + 1,
-                               max_attempts, interval, count, extend,
-                               runas=runas, level=level, msg=" ".join(msg))
-        inp_op = op
-        for k, v in attrib.items():
-            varargs = None
-            if isinstance(v, tuple):
-                op = v[0]
-                if len(v) > 2:
-                    varargs = v[2:]
-                v = v[1]
-            else:
-                op = inp_op
-
-            for stat in statlist:
-                if k not in stat:
-                    if op == UNSET:
-                        continue
-
-                    # Sometimes users provide the wrong case for attributes
-                    # Convert to lowercase and compare
-                    attrs_lower = {
-                        ks.lower(): [ks, vs] for ks, vs in stat.items()}
-                    k_lower = k.lower()
-                    if k_lower not in attrs_lower:
-                        if (statlist.index(stat) + 1) < len(statlist):
-                            continue
-                        time.sleep(interval)
-                        _tsc = trigger_sched_cycle
-                        return self.expect(obj_type, attrib, id, op, attrop,
-                                           attempt + 1, max_attempts,
-                                           interval, count, extend,
-                                           level=level, msg=" ".join(msg),
-                                           trigger_sched_cycle=_tsc)
-                    stat_v = attrs_lower[k_lower][1]
-                    stat_k = attrs_lower[k_lower][0]
-                else:
-                    stat_v = stat[k]
-                    stat_k = k
-
-                if stat_k == ATTR_version:
-                    m = self.version_tag.match(stat_v)
-                    if m:
-                        stat_v = m.group('version')
-                    else:
-                        time.sleep(interval)
-                        return self.expect(obj_type, attrib, id, op, attrop,
-                                           attempt + 1, max_attempts, interval,
-                                           count, extend, runas=runas,
-                                           level=level, msg=" ".join(msg))
-
-                # functions/methods are invoked and their return value
-                # used on expect
-                if isinstance(v, collections.Callable):
-                    if varargs is not None:
-                        rv = v(stat_v, *varargs)
-                    else:
-                        rv = v(stat_v)
-                    if isinstance(rv, bool):
-                        if op == NOT:
-                            if not rv:
-                                continue
-                        if rv:
-                            continue
-                    else:
-                        v = rv
-
-                stat_v = PbsAttribute.decode_value(stat_v)
-                v = PbsAttribute.decode_value(str(v))
-
-                if stat_k == ATTR_version:
-                    stat_v = LooseVersion(str(stat_v))
-                    v = LooseVersion(str(v))
-
-                if op == EQ and stat_v == v:
-                    continue
-                elif op == SET and count and stat_v == v:
-                    continue
-                elif op == SET and count in (False, None):
-                    continue
-                elif op == NE and stat_v != v:
-                    continue
-                elif op == LT:
-                    if stat_v < v:
-                        continue
-                elif op == GT:
-                    if stat_v > v:
-                        continue
-                elif op == LE:
-                    if stat_v <= v:
-                        continue
-                elif op == GE:
-                    if stat_v >= v:
-                        continue
-                elif op == MATCH_RE:
-                    if re.search(str(v), str(stat_v)):
-                        continue
-                elif op == MATCH:
-                    if str(stat_v).find(str(v)) != -1:
-                        continue
-
-                msg += [' got: ' + stat_k + ' = ' + str(stat_v)]
-                self.logger.info(prefix + " ".join(msg))
-                time.sleep(interval)
-
-                # run custom actions defined for this object type
-                if trigger_sched_cycle and self.actions:
-                    for act_obj in self.actions.get_actions_by_type(obj_type):
-                        if act_obj.enabled:
-                            act_obj.action(self, obj_type, attrib, id, op,
-                                           attrop)
-                return self.expect(obj_type, attrib, id, op, attrop,
-                                   attempt + 1, max_attempts, interval, count,
-                                   extend, level=level, msg=" ".join(msg),
-                                   trigger_sched_cycle=trigger_sched_cycle)
-
-        self.logger.log(level, prefix + " ".join(msg) + ' ...  OK')
-        return True
-
+        wrapper = self.wrappers()
+        return_value = wrapper.expect(
+            obj_type,
+            attrib,
+            id,
+            op,
+            attrop,
+            attempt,
+            max_attempts,
+            interval,
+            count,
+            extend,
+            offset,
+            runas,
+            level,
+            msg,
+            trigger_sched_cycle)
+        self.update_wrapper_values(wrapper.update_values())
+        return return_value
+    
     def status(self, obj_type=SERVER, attrib=None, id=None,
                extend=None, level=logging.INFO, db_access=None, runas=None,
                resolve_indirectness=False, logerr=True):
