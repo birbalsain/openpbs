@@ -147,7 +147,7 @@ class Wrappers:
                  pbs_conf={},
                  ptl_conf={},
                  platform=None,
-                 get_op_mode1=None):
+                 get_mode=None):
         self.jobs = jobs
         self.shortname = shortname
         self.hostname = hostname
@@ -194,7 +194,7 @@ class Wrappers:
         self.snap = snap
         self.ptl_conf = ptl_conf
         self.platform = platform
-        self.get_op_mode1 = get_op_mode1
+        self.get_mode = get_mode
 
     def update_special_attr(self, obj_type, id=None):
         """
@@ -881,7 +881,7 @@ class Wrappers:
                 bsl = self.utils.file_to_dictlist(self.snapmap[obj_type],
                                                   attrib, id=id)
         # 6- Stat using PBS CLI commands
-        elif self.get_op_mode1 == PTL_CLI:
+        elif self.get_mode == PTL_CLI:
             tgt = self.client
             if obj_type in (JOB, QUEUE, SERVER):
                 pcmd = [os.path.join(
@@ -1161,7 +1161,6 @@ class Wrappers:
         """
         expect an attribute to match a given value as per an
         operation.
-
         :param obj_type: The type of object to query, JOB, SERVER,
                          SCHEDULER, QUEUE, NODE
         :type obj_type: str
@@ -1199,9 +1198,7 @@ class Wrappers:
         :param trigger_sched_cycle: True by default can be set to False if
                           kicksched_action is not supposed to be called
         :type trigger_sched_cycle: Boolean
-
         :returns: True if attributes are as expected
-
         :raises: PtlExpectError if attributes are not as expected
         """
 
@@ -1565,7 +1562,7 @@ class Wrappers:
                 runcmd += ["\n"]
 
         script_file = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             exclude_attrs = []  # list of attributes to not convert to CLI
             if isinstance(obj, Job):
                 runcmd += [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
@@ -1812,7 +1809,7 @@ class Wrappers:
         self.logger.info(prefix)
         c = None
         rc = 0
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qdel')]
             if extend is not None:
                 pcmd += self.utils.convert_to_cli(extend, op=IFL_DELETE,
@@ -1904,7 +1901,7 @@ class Wrappers:
         self.logger.info(prefix)
         c = None
         rc = 0
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
                                  'pbs_rdel')]
             if not self.default_client_pbs_conf:
@@ -2051,7 +2048,7 @@ class Wrappers:
         self.logger.info(prefix + s)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'],
                                  'bin', 'qselect')]
 
@@ -2182,7 +2179,7 @@ class Wrappers:
 
         c = None  # connection handle
 
-        if (self.get_op_mode1 == PTL_CLI or
+        if (self.get_mode == PTL_CLI or
             sudo is not None or
             obj_type in (HOOK, PBS_HOOK) or
             (attrib is not None and ('job_sort_formula' in attrib or
@@ -2456,7 +2453,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qsig')]
             if signal is not None:
                 pcmd += ['-s']
@@ -2539,7 +2536,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qmsg')]
             if to_file is not None:
                 if MSG_ERR == to_file:
@@ -2620,7 +2617,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
                                  'qalter')]
             if attrib is not None:
@@ -2691,7 +2688,7 @@ class Wrappers:
 
         c = None
         resvid = resvid.split()
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
                                  'pbs_ralter')]
             if attrib is not None:
@@ -2763,7 +2760,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qhold')]
             if holdtype is not None:
                 pcmd += ['-h']
@@ -2831,7 +2828,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qrls')]
             if holdtype is not None:
                 pcmd += ['-h']
@@ -2896,7 +2893,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
                                  'qrerun')]
             if extend:
@@ -2961,7 +2958,7 @@ class Wrappers:
         self.logger.info(prefix)
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin',
                                  'qorder')]
             if jobid1 is not None:
@@ -3034,7 +3031,7 @@ class Wrappers:
             return 0
 
         c = None
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qrun')]
             if run_async:
                 pcmd += ['-a']
@@ -3111,7 +3108,7 @@ class Wrappers:
         c = None
         rc = 0
 
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qmove')]
             if destination is not None:
                 pcmd += [destination]
@@ -3204,7 +3201,7 @@ class Wrappers:
         c = None
         rc = 0
 
-        if self.get_op_mode1 == PTL_CLI:
+        if self.get_mode == PTL_CLI:
             pcmd = [os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qterm')]
             _conf = self.default_client_pbs_conf
             pcmd += self.utils.convert_to_cli(manner, op=IFL_TERMINATE,
@@ -3248,7 +3245,7 @@ class Wrappers:
         """
         Get the error message
         """
-        mode = self.get_op_mode1
+        mode = self.get_mode
         if mode == PTL_CLI:
             return self.last_error
         elif self._conn is not None and self._conn >= 0:

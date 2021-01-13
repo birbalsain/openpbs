@@ -317,52 +317,6 @@ class Server(PBSService, Wrappers):
             self.update_version_info()
             self.pbs_version = self.attributes[ATTR_version]
 
-    def update_wrapper_values(self, wrapper_values=[]):
-        self.jobs = wrapper_values[0]
-        self.shortname = wrapper_values[1]
-        self.hostname = wrapper_values[2]
-        self._is_local = wrapper_values[3]
-        self.dflt_sched_name = wrapper_values[4]
-        self.snapmap = wrapper_values[5]
-        self.nodes = wrapper_values[6]
-        self.reservations = wrapper_values[7]
-        self.queues = wrapper_values[8]
-        self.resources = wrapper_values[9]
-        self.hooks = wrapper_values[10]
-        self.pbshooks = wrapper_values[11]
-        self.entities = wrapper_values[12]
-        self.schedulers = wrapper_values[13]
-        self.default_queue = wrapper_values[14]
-        self.last_error = wrapper_values[15]
-        self.last_out = wrapper_values[16]
-        self.last_rc = wrapper_values[17]
-        self.moms = wrapper_values[18]
-        self._conn_timeout = wrapper_values[19]
-        self._conn_timer = wrapper_values[20]
-        self._conn = wrapper_values[21]
-        self._db_conn = wrapper_values[22]
-        self.current_user = wrapper_values[23]
-        self.pexpect_timeout = wrapper_values[24]
-        self.pexpect_sleep_time = wrapper_values[25]
-        self.logprefix = wrapper_values[26]
-        self.pi = wrapper_values[27]
-        self.actions = wrapper_values[28]
-        self.version_tag = wrapper_values[29]
-        self.__special_attr_keys = wrapper_values[30]
-        self.__special_attr = wrapper_values[31]
-        self.client = wrapper_values[32]
-        self.client_pbs_conf_file = wrapper_values[33]
-        self.client_conf = wrapper_values[34]
-        self.default_client_pbs_conf = wrapper_values[35]
-        self.dflt_ttributes = wrapper_values[36]
-        self.attributes = wrapper_values[37]
-        self.default_pbs_conf = wrapper_values[38]
-        self.pbs_conf = wrapper_values[39]
-        self.snap = wrapper_values[40]
-        self.ptl_conf = wrapper_values[41]
-        self.platform = wrapper_values[42]
-        self.has_snap = wrapper_values[43]
-
     def update_version_info(self):
         """
         Update the version information.
@@ -1651,20 +1605,9 @@ class Server(PBSService, Wrappers):
         :type runas: str or None
         """
         self.logit('filter: ', obj_type, attrib, id)
-        return_value = self._filter(
-            obj_type,
-            attrib,
-            id,
-            extend,
-            op,
-            attrop,
-            bslist,
-            PTL_FILTER,
-            idonly,
-            db_access,
-            runas=runas,
-            resolve_indirectness=resolve_indirectness)
-        return return_value
+        return self._filter(obj_type, attrib, id, extend, op, attrop, bslist,
+                            PTL_FILTER, idonly, db_access, runas=runas,
+                            resolve_indirectness=resolve_indirectness)
 
     def equivalence_classes(self, obj_type=None, attrib={}, bslist=None,
                             op=RESOURCES_AVAILABLE, show_zero_resources=True,
@@ -3166,16 +3109,3 @@ class Server(PBSService, Wrappers):
                 print("\n".join(sql_stmt))
                 if db_creds_file is not None:
                     pass
-
-    def geterrmsg(self):
-        """
-        Get the error message
-        """
-        mode = self.get_op_mode()
-        if mode == PTL_CLI:
-            return self.last_error
-        elif self._conn is not None and self._conn >= 0:
-            m = pbs_geterrmsg(self._conn)
-            if m is not None:
-                m = m.split('\n')
-            return m
