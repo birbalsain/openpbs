@@ -1,6 +1,6 @@
 # coding: utf-8
 
-# Copyright (C) 1994-2021 Altair Engineering, Inc.
+# Copyright (C) 1994-2020 Altair Engineering, Inc.
 # For more information, contact Altair at www.altair.com.
 #
 # This file is part of both the OpenPBS software ("OpenPBS")
@@ -68,14 +68,11 @@ class TestQsub_direct_write(TestFunctional):
         are getting directly written to the mapped directory
         when direct_files option is used.
         """
-        j = Job(TEST_USER, attrs={ATTR_k: 'doe'})
-        j.set_sleep_time(10)
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
         mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
-        self.mom.restart()
+        j = Job(TEST_USER, attrs={ATTR_k: 'doe',
+                                  ATTR_e: mapping_dir, ATTR_o: mapping_dir})
+        j.set_sleep_time(10)
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
@@ -96,15 +93,12 @@ class TestQsub_direct_write(TestFunctional):
                 (but is a gid that the user is a member of)
         3) not accessible via other permissions
         """
-        j = Job(TEST_USER4, attrs={ATTR_k: 'doe'})
-        j.set_sleep_time(10)
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER5)
         mapping_dir = self.du.create_temp_dir(
             asuser=TEST_USER4, asgroup=TSTGRP5, mode=0o770)
-        self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
-        self.mom.restart()
+        j = Job(TEST_USER4, attrs={ATTR_k: 'doe',
+                                   ATTR_o: mapping_dir, ATTR_e: mapping_dir})
+        j.set_sleep_time(10)
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
@@ -119,19 +113,15 @@ class TestQsub_direct_write(TestFunctional):
         are getting directly written to the mapped directory
         when direct_files option is used with o option.
         """
-        j = Job(TEST_USER, attrs={ATTR_k: 'do'})
-        j.set_sleep_time(10)
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
         mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
-        self.mom.restart()
+        j = Job(TEST_USER, attrs={ATTR_k: 'do', ATTR_o: mapping_dir})
+        j.set_sleep_time(10)
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
         for name in os.listdir(mapping_dir):
-            p = re.search('STDIN.e*', name)
+            p = re.search(jid + '.OU', name)
             if p:
                 self.logger.info('Match found: ' + p.group())
             else:
@@ -147,19 +137,15 @@ class TestQsub_direct_write(TestFunctional):
         are getting directly written to the mapped directory
         when direct_files option is used with e option.
         """
-        j = Job(TEST_USER, attrs={ATTR_k: 'de'})
-        j.set_sleep_time(10)
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
         mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
-        self.mom.restart()
+        j = Job(TEST_USER, attrs={ATTR_k: 'de', ATTR_e: mapping_dir})
+        j.set_sleep_time(10)
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
         for name in os.listdir(mapping_dir):
-            p = re.search('STDIN.e*', name)
+            p = re.search(jid + '.ER', name)
             if p:
                 self.logger.info('Match found: ' + p.group())
             else:
@@ -225,16 +211,13 @@ class TestQsub_direct_write(TestFunctional):
         are getting directly written to the mapped directory
         when default_qsub_arguments is set to -kdoe.
         """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
         j = Job(TEST_USER)
         j.set_sleep_time(10)
         self.server.manager(MGR_CMD_SET, SERVER, {
-                            'default_qsub_arguments': '-kdoe'})
-        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
-        self.mom.restart()
+                            'default_qsub_arguments': '-kdoe',
+                            ATTR_e: mapping_dir, ATTR_o: mapping_dir})
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
@@ -310,15 +293,12 @@ class TestQsub_direct_write(TestFunctional):
         written/absent spool file as files are already
         present on first run of the job.
         """
-        self.mom.add_config({'$logevent': '0xffffffff'})
-        j = Job(TEST_USER, attrs={ATTR_k: 'doe'})
-        j.set_sleep_time(10)
         sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
         mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
-        self.mom.add_config(
-            {'$usecp': self.server.hostname + ':' + sub_dir +
-             ' ' + mapping_dir})
-        self.mom.restart()
+        self.mom.add_config({'$logevent': '0xffffffff'})
+        j = Job(TEST_USER, attrs={ATTR_k: 'doe',
+                                  ATTR_e: mapping_dir, ATTR_o: mapping_dir})
+        j.set_sleep_time(10)
         jid = self.server.submit(j, submit_dir=sub_dir)
         self.logger.info(self.msg)
         self.server.expect(JOB, {ATTR_k: 'doe'}, id=jid)
