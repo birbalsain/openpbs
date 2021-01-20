@@ -393,3 +393,235 @@ class TestQsub_direct_write(TestFunctional):
                 if f_name not in file_list:
                     raise self.failureException("std file " + f_name +
                                                 " not found")
+
+    def test_cmd_direct_write_when_job_succeeds(self):
+        """
+        submit a sleep job and make sure that the std_files
+        are getting directly written to the mapped directory
+        when mapping directory is provided at the time of job submission
+        and direct_files option is used.
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        j = Job(TEST_USER, attrs={ATTR_k: 'doe',
+                                  ATTR_e: mapping_dir, ATTR_o: mapping_dir})
+        j.set_sleep_time(10)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {ATTR_k: 'doe'}, id=jid)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_count = len([name for name in os.listdir(
+            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        self.assertEqual(2, file_count)
+
+    def test_cmd_direct_write_when_job_succeeds_controlled(self):
+        """
+        submit a sleep job and make sure that the std_files
+        are getting directly written to the mapped directory
+        when mapping directory is provided at the time of job submission
+        and direct_files option is used.
+        directory should be
+        1) owned by a different user
+        2) owned by a group that is not the job user's primary gid
+                (but is a gid that the user is a member of)
+        3) not accessible via other permissions
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER5)
+        mapping_dir = self.du.create_temp_dir(
+            asuser=TEST_USER4, asgroup=TSTGRP5, mode=0o770)
+        j = Job(TEST_USER4, attrs={ATTR_k: 'doe',
+                                   ATTR_o: mapping_dir, ATTR_e: mapping_dir})
+        j.set_sleep_time(10)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {ATTR_k: 'doe'}, id=jid)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_count = len([name for name in os.listdir(
+            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        self.assertEqual(2, file_count)
+
+    def test_cmd_direct_write_output_file(self):
+        """
+        submit a sleep job and make sure that the output file
+        are getting directly written to the mapped directory
+        when mapping directory is provided at the time of job submission
+        and direct_files option is used with o option.
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        j = Job(TEST_USER, attrs={ATTR_k: 'do', ATTR_o: mapping_dir})
+        j.set_sleep_time(10)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {ATTR_k: 'do'}, id=jid)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        for name in os.listdir(mapping_dir):
+            p = re.search(jid + '.OU', name)
+            if p:
+                self.logger.info('Match found: ' + p.group())
+            else:
+                self.assertTrue(False)
+        file_count = len([name for name in os.listdir(
+            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        self.assertEqual(1, file_count)
+
+    def test_cmd_direct_write_error_file(self):
+        """
+        submit a sleep job and make sure that the error file
+        are getting directly written to the mapped directory
+        when mapping directory is provided at the time of job submission
+        and direct_files option is used with e option.
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        j = Job(TEST_USER, attrs={ATTR_k: 'de', ATTR_e: mapping_dir})
+        j.set_sleep_time(10)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {ATTR_k: 'de'}, id=jid)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        for name in os.listdir(mapping_dir):
+            p = re.search(jid + '.ER', name)
+            if p:
+                self.logger.info('Match found: ' + p.group())
+            else:
+                self.assertTrue(False)
+        file_count = len([name for name in os.listdir(
+            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        self.assertEqual(1, file_count)
+
+    def test_cmd_direct_write_default_qsub_arguments(self):
+        """
+        submit a sleep job and make sure that the std_files
+        are getting directly written to the mapped directory
+        when when mapping directory is provided at the time of job submission
+        and default_qsub_arguments is set to -kdoe.
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        j = Job(TEST_USER)
+        j.set_sleep_time(10)
+        self.server.manager(MGR_CMD_SET, SERVER, {
+                            'default_qsub_arguments': '-kdoe',
+                            ATTR_e: mapping_dir, ATTR_o: mapping_dir})
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_count = len([name for name in os.listdir(
+            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        self.assertEqual(2, file_count)
+        self.server.expect(JOB, {ATTR_k: 'doe'}, id=jid)
+
+    def test_cmd_direct_write_without_mapping_diretory(self):
+        """
+        submit a sleep job and make sure that the std_files
+        is directly written to the submission directory when it is
+        accessible from mom and direct_files option is used
+        but mapping directory is not pprovided at the time of 
+        job submission.
+        """
+        j = Job(TEST_USER, attrs={ATTR_k: 'doe'})
+        j.set_sleep_time(10)
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_count = len([name for name in os.listdir(
+            sub_dir) if os.path.isfile(os.path.join(sub_dir, name))])
+        self.assertEqual(2, file_count)
+
+    def test_cmd_direct_write_qrerun(self):
+        """
+        submit a sleep job and make sure that the std_files
+        are written and when a job is rerun error message
+        in logged in mom_log that it is skipping directly
+        written/absent spool file as files are already
+        present on first run of the job.
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        self.mom.add_config({'$logevent': '0xffffffff'})
+        j = Job(TEST_USER, attrs={ATTR_k: 'doe',
+                                  ATTR_e: mapping_dir, ATTR_o: mapping_dir})
+        j.set_sleep_time(10)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.logger.info(self.msg)
+        self.server.expect(JOB, {ATTR_k: 'doe'}, id=jid)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        self.server.rerunjob(jid)
+        self.mom.log_match(
+            "stage_file;Skipping directly written/absent spool file",
+            max_attempts=10, interval=5)
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_count = len([name for name in os.listdir(
+            mapping_dir) if os.path.isfile(os.path.join(mapping_dir, name))])
+        self.assertEqual(2, file_count)
+
+    def test_cmd_direct_write_job_array_without_mapping(self):
+        """
+        submit a job array and make sure that the std_files
+        is directly written to the submission directory when it is
+        accessible from mom and direct_files option is used
+        but mapping directory is not provided.
+        """
+        self.checks_available_ncpus(4)
+        a = {'resources_available.ncpus': 4}
+        self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname)
+        j = Job(TEST_USER, attrs={ATTR_k: 'doe', ATTR_J: '1-4'})
+        j.set_sleep_time(10)
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.server.expect(JOB, {ATTR_state: 'B'}, id=jid)
+        self.server.expect(JOB, {ATTR_state + '=R': 4}, count=True,
+                           id=jid, extend='t')
+        self.logger.info('checking for directly written std files')
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_list = [name for name in os.listdir(
+            sub_dir) if os.path.isfile(os.path.join(sub_dir, name))]
+        self.assertEqual(8, len(file_list))
+        idn = jid[:jid.find('[]')]
+        for std in ['o', 'e']:
+            for sub_ind in range(1, 5):
+                f_name = 'STDIN.' + std + idn + '.' + str(sub_ind)
+                if f_name not in file_list:
+                    raise self.failureException("std file " + f_name +
+                                                " not found")
+
+    def test_cmd_direct_write_job_array(self):
+        """
+        submit a job array and make sure that the files
+        are getting directly written to the mapping directory
+        when mapping diectory is provided at the time of job submission
+        and direct write option option is used for stderr and
+        stdout
+        """
+        sub_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        mapping_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        self.checks_available_ncpus(4)
+        a = {'resources_available.ncpus': 4}
+        self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname)
+        tmp_dir = self.du.create_temp_dir(asuser=TEST_USER)
+        a = {ATTR_k: 'doe', ATTR_e: tmp_dir, ATTR_o: tmp_dir, ATTR_J: '1-4'}
+        j = Job(TEST_USER, attrs=a)
+        j.set_sleep_time(10)
+        jid = self.server.submit(j, submit_dir=sub_dir)
+        self.server.expect(JOB, {ATTR_state: 'B'}, id=jid)
+        self.server.expect(JOB, {ATTR_state + '=R': 4}, count=True,
+                           id=jid, extend='t')
+        self.logger.info('checking for directly written std files')
+        self.server.expect(JOB, 'job_state', op=UNSET, id=jid)
+        file_list = [name for name in os.listdir(
+            tmp_dir) if os.path.isfile(os.path.join(tmp_dir, name))]
+        self.assertEqual(8, len(file_list))
+        for ext in ['.OU', '.ER']:
+            for sub_ind in range(1, 5):
+                f_name = j.create_subjob_id(jid, sub_ind) + ext
+                if f_name not in file_list:
+                    raise self.failureException("std file " + f_name +
+                                                " not found")
