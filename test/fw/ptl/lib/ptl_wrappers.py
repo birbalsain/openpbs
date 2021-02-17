@@ -102,10 +102,6 @@ from ptl.lib.ptl_batchutils import *
 
 
 class Wrappers(PBSService):
-    logger = logging.getLogger(__name__)
-    du = DshUtils()
-    utils = BatchUtils()
-
     dflt_attributes = {
         ATTR_dfltque: "workq",
         ATTR_nodefailrq: "310",
@@ -185,7 +181,6 @@ class Wrappers(PBSService):
         super().__init__(name, attrs, defaults, pbsconf_file, snapmap,
                          snap)
         _m = ['server ', self.shortname]
-        self.name = self.shortname
         if pbsconf_file is not None:
             _m += ['@', pbsconf_file]
         _m += [': ']
