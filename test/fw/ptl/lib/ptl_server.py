@@ -100,48 +100,6 @@ from ptl.lib.ptl_expect_action import ExpectActions
 
 
 class Wrappers(PBSService):
-
-    """
-    PBS server ``configuration`` and ``control``
-    The Server class is a container to PBS server attributes
-    and implements wrappers to the ``IFL API`` to perform
-    operations on the server. For example to submit, status,
-    delete, manage, etc... jobs, reservations and configurations.
-    This class also offers higher-level routines to ease testing,
-    see functions, for ``example: revert_to_defaults,
-    init_logging, expect, counter.``
-    :param name: The hostname of the server. Defaults to
-                 calling pbs_default()
-    :type name: str
-    :param attrs: Dictionary of attributes to set, these will
-                  override defaults.
-    :type attrs: Dictionary
-    :param defaults: Dictionary of default attributes.
-                     Default: dflt_attributes
-    :type defaults: Dictionary
-    :param pbsconf_file: path to config file to parse for PBS_HOME,
-                         PBS_EXEC, etc
-    :type pbsconf_file: str
-    :param snapmap: A dictionary of PBS objects (node,server,etc)
-                    to mapped files from PBS snap directory
-    :type snapmap: Dictionary
-    :param snap: path to PBS snap directory (This will overrides
-                 snapmap)
-    :type snap: str
-    :param client: The host to use as client for CLI queries.
-                   Defaults to the local hostname.
-    :type client: str
-    :param client_pbsconf_file: The path to a custom PBS_CONF_FILE
-                                on the client host. Defaults to
-                                the same path as pbsconf_file.
-    :type client_pbsconf_file: str
-    :param db_acccess: set to either file containing credentials
-                       to DB access or dictionary containing
-                       {'dbname':...,'user':...,'port':...}
-    :param stat: if True, stat the server attributes
-    :type stat: bool
-    """
-
     dflt_attributes = {
         ATTR_dfltque: "workq",
         ATTR_nodefailrq: "310",
@@ -218,7 +176,6 @@ class Wrappers(PBSService):
 
         self.pexpect_timeout = 15
         self.pexpect_sleep_time = .1
-
         super().__init__(name, attrs, defaults, pbsconf_file, snapmap,
                          snap)
         _m = ['server ', self.shortname]
@@ -901,7 +858,7 @@ class Wrappers(PBSService):
         # the whole path
         # Get sleep command depending on which Mom the job will run
         if ((ATTR_executable in obj.attributes) and
-           ('sleep' in obj.attributes[ATTR_executable])):
+                ('sleep' in obj.attributes[ATTR_executable])):
             obj.attributes[ATTR_executable] = (
                 list(self.moms.values())[0]).sleep_cmd
 
@@ -2890,9 +2847,9 @@ class Wrappers(PBSService):
             if len(newattr) == 0:
                 newattr = attrib
 
-            statlist = [self.counter(obj_type, newattr, id, extend, op=op,
-                                     attrop=attrop, level=logging.DEBUG,
-                                     runas=runas)]
+            statlist = [self._filter(obj_type, newattr, id, extend, op=op,
+                                     attrop=attrop, runas=runas,
+                                     level=logging.DEBUG)]
         else:
             try:
                 statlist = self.status(obj_type, attrib, id=id,
@@ -3186,13 +3143,13 @@ class Wrappers(PBSService):
     def _filter(self, obj_type=None, attrib=None, id=None, extend=None,
                 op=None, attrop=None, bslist=None, mode=PTL_COUNTER,
                 idonly=True, grandtotal=False, db_access=None, runas=None,
-                resolve_indirectness=False):
+                resolve_indirectness=False, level=logging.DEBUG):
 
         if bslist is None:
             try:
                 _a = resolve_indirectness
                 tmp_bsl = self.status(obj_type, attrib, id,
-                                      level=logging.DEBUG, extend=extend,
+                                      level=level, extend=extend,
                                       db_access=db_access, runas=runas,
                                       resolve_indirectness=_a)
                 del _a
