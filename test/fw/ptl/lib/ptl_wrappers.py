@@ -2841,7 +2841,7 @@ class Wrappers(PBSService):
             if len(newattr) == 0:
                 newattr = attrib
 
-            statlist = [self.counter(obj_type, newattr, id, extend, op=op,
+            statlist = [self._filter(obj_type, newattr, id, extend, op=op,
                                      attrop=attrop, level=logging.DEBUG,
                                      runas=runas)]
         else:
@@ -3134,54 +3134,16 @@ class Wrappers(PBSService):
                 self.utils.update_attributes_list(obj)
                 obj.__dict__.update(binfo)
 
-    def counter(self, obj_type=None, attrib=None, id=None, extend=None,
-                op=None, attrop=None, bslist=None, level=logging.INFO,
-                idonly=True, grandtotal=False, db_access=None, runas=None,
-                resolve_indirectness=False):
-        """
-        Accumulate properties set on an object. For example, to
-        count number of free nodes:
-        ``server.counter(VNODE,{'state':'free'})``
-        :param obj_type: The type of object to query, one of the
-                         * objects
-        :param attrib: Attributes to query, can be a string, a
-                       list, a dictionary
-        :type attrib: str or list or dictionary
-        :param id: The id of the object to act upon
-        :param extend: The extended parameter to pass to the stat
-                       call
-        :param op: The operation used to match attrib to what is
-                   queried. SET or None
-        :type op: str or None
-        :param attrop: Operation on multiple attributes, either
-                       PTL_AND, PTL_OR
-        :param bslist: Optional, use a batch status dict list
-                       instead of an obj_type
-        :param idonly: if true, return the name/id of the matching
-                       objects
-        :type idonly: bool
-        :param db_access: credentials to access db, either a path
-                          to file or dictionary
-        :type db_access: str or dictionary
-        :param runas: run as user
-        :type runas: str or None
-        """
-        self.logit('counter: ', obj_type, attrib, id, level=level)
-        return self._filter(obj_type, attrib, id, extend, op, attrop, bslist,
-                            PTL_COUNTER, idonly, grandtotal, db_access,
-                            runas=runas,
-                            resolve_indirectness=resolve_indirectness)
-
     def _filter(self, obj_type=None, attrib=None, id=None, extend=None,
                 op=None, attrop=None, bslist=None, mode=PTL_COUNTER,
                 idonly=True, grandtotal=False, db_access=None, runas=None,
-                resolve_indirectness=False):
+                resolve_indirectness=False, level=logging.DEBUG):
 
         if bslist is None:
             try:
                 _a = resolve_indirectness
                 tmp_bsl = self.status(obj_type, attrib, id,
-                                      level=logging.DEBUG, extend=extend,
+                                      level=level, extend=extend,
                                       db_access=db_access, runas=runas,
                                       resolve_indirectness=_a)
                 del _a
