@@ -40,32 +40,18 @@
 
 import ast
 import base64
-import collections
 import copy
 import datetime
 import grp
 import json
 import logging
 import os
-import pickle
-import pwd
-import random
-import re
 import socket
 import string
 import sys
-import tempfile
-import threading
 import time
-import traceback
-from collections import OrderedDict
-from distutils.version import LooseVersion
-from operator import itemgetter
 
-from ptl.lib.pbs_api_to_cli import api_to_cli
-from ptl.utils.pbs_cliutils import CliUtils
 from ptl.utils.pbs_dshutils import DshUtils, PtlUtilError
-from ptl.utils.pbs_procutils import ProcUtils
 from ptl.utils.pbs_testusers import (ROOT_USER, TEST_USER, PbsUser,
                                      DAEMON_SERVICE_USER)
 
@@ -92,11 +78,9 @@ from ptl.lib.ptl_types import PbsAttribute
 from ptl.lib.ptl_constants import *
 from ptl.lib.ptl_entities import (Hook, Queue, Entity, Limit,
                                   EquivClass, Resource)
-from ptl.lib.ptl_resourceresv import Job, Reservation, InteractiveJob
 from ptl.lib.ptl_sched import Scheduler
 from ptl.lib.ptl_mom import MoM, get_mom_obj
 from ptl.lib.ptl_service import PBSService, PBSInitServices
-from ptl.lib.ptl_expect_action import ExpectActions
 from ptl.lib.ptl_wrappers import *
 
 
