@@ -66,7 +66,6 @@ useradd -K UMASK=0022 -m -s /bin/bash -u 4366 -g tstgrp03 -G tstgrp04,tstgrp07,t
 useradd -K UMASK=0022 -m -s /bin/bash -u 4368 -g tstgrp01 -G tstgrp01 pbsuser7
 useradd -K UMASK=0022 -m -s /bin/bash -u 11000 -g tstgrp00 -G tstgrp00 tstusr00
 useradd -K UMASK=0022 -m -s /bin/bash -u 11001 -g tstgrp00 -G tstgrp00 tstusr01
-
 . /etc/os-release
 
 if [ "x${ID}" == "xcentos" -a "x${VERSION_ID}" == "x8" ]; then
@@ -156,11 +155,25 @@ elif [ "x${ID}" == "xubuntu" ]; then
     net-tools man time csh lsof curl gzip iputils-ping \
     expect cpanminus locales-all dnsutils tzdata vim bc file \
     systemd systemd-sysv sysvinit-utils libcap2-bin rsyslog libpam-dev \
-    openssh-server openssh-client valgrind llvm gdb rsync wget ccache \
-    python python-pip
+    openssh-server openssh-client valgrind llvm gdb rsync wget ccache 
+  if [ "x${ID}" == "xubuntu" -a "x${VERSION_ID}" == "x20.04" ]; then
+    apt -y install python3 python3-pip libpam-modules-bin openssh-server \
+      libnss-myhostname libnss-myhostname-dbgsym libnss-mymachines libnss-mymachines-dbgsym libnss-resolve \
+      libnss-resolve-dbgsym libnss-systemd libnss-systemd-dbgsym libpam-systemd libpam-systemd-dbgsym \
+      libsystemd-dev libsystemd0 libsystemd0-dbgsym libudev-dev libudev1 libudev1 libudev1-udeb \
+      systemd systemd-container systemd-container-dbgsym systemd-coredump \
+      systemd-coredump-dbgsym systemd-dbgsym systemd-journal-remote \
+      systemd-journal-remote-dbgsym systemd-sysv systemd-tests systemd-tests-dbgsym \ 
+      udev udev-dbgsym udev-ude
+  else
+    apt -y install python python-pip
+  fi
   if [ "x${ID}" == "xubuntu" -a "x${VERSION_ID}" == "x16.04" ]; then
     wget -qO - https://package.perforce.com/perforce.pubkey | apt-key add - &&
       echo 'deb http://package.perforce.com/apt/ubuntu/ xenial release' >/etc/apt/sources.list.d/perforce.list
+  elif [ "x${ID}" == "xubuntu" -a "x${VERSION_ID}" == "x20.04" ]; then
+    wget -qO - https://package.perforce.com/perforce.pubkey | apt-key add - &&
+      echo 'deb http://package.perforce.com/apt/ubuntu/ focal release' >/etc/apt/sources.list.d/perforce.list
   else
     wget -qO - https://package.perforce.com/perforce.pubkey | apt-key add - &&
       echo 'deb http://package.perforce.com/apt/ubuntu/ bionic release' >/etc/apt/sources.list.d/perforce.list
@@ -175,10 +188,15 @@ elif [ "x${ID}" == "xubuntu" ]; then
 fi
 
 # Install pip, requests and sh python modules
-set -ex &&
-  python -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org requests sh &&
-  rm -rf ~/.cache /tmp/*
-
+if [ "x${ID}" == "xubuntu" -a "x${VERSION_ID}" == "x20.04" ]; then
+  set -ex &&
+    python3 -m pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org requests sh &&
+    rm -rf ~/.cache /tmp/*
+else
+  set -ex &&
+    python -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org requests sh &&
+    rm -rf ~/.cache /tmp/*
+fi
 # QALib deps modules
 cpanm -n --no-wget --no-lwp --curl \
   IO::Pty IPC::Run IPC::Cmd Class::Accessor Module::Build Pod::Usage \
@@ -203,11 +221,17 @@ if [ "x${ID}" != "xubuntu" -a "x${VERSION_ID}" != "x16.04" ]; then
   systemctl mask sm-client
 fi
 systemctl enable rsyslog
-systemctl disable getty@.service
+systemctl enable getty@.service
 systemctl unmask getty.target
 systemctl unmask console-getty
 systemctl enable getty.target
 systemctl enable console-getty
+systemctl unmask user@.service
+systemctl enable user@.service
+systemctl unmask x11-common.service      
+systemctl enable user.slice
+systemctl enable systemd-networkd.socket
+systemctl enable rsync.service
 systemctl enable ci-script-wrapper
 
 cp /workspace/etc/container-env-setup.sh /etc/profile.d/0container-env-setup.sh
