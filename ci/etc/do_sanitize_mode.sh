@@ -45,6 +45,22 @@ yum -y update
 yum -y install yum-utils epel-release rpmdevtools libasan llvm
 rpmdev-setuptree
 yum -y install python3-pip sudo which net-tools man-db time.x86_64
+dnf install -y dnf-plugins-core
+dnf config-manager --set-enabled powertools
+if [ ! -f /tmp/swig/swig/configure ]; then
+       # source install swig
+       dnf -y install gcc-c++ byacc pcre-devel
+       mkdir -p /tmp/swig/
+       cd /tmp/swig
+       git clone https://github.com/swig/swig --branch rel-4.0.0 --single-branch
+       cd swig
+       ./autogen.sh
+       ./configure
+       make -j8
+       make install
+       cd ${PBS_DIR}
+fi
+
 yum-builddep -y ./*.spec
 ./autogen.sh
 rm -rf target-sanitize

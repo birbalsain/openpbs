@@ -333,6 +333,9 @@ cd build
 %if %{defined suse_version}
 	--libexecdir=%{pbs_prefix}/libexec \
 %endif
+%if 0%{?centos} == 8
+        --with-swig="/usr/local" \
+%endif
 %if %{with alps}
 	--enable-alps \
 %endif
