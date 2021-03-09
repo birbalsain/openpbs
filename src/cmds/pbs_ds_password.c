@@ -552,6 +552,7 @@ main(int argc, char *argv[])
 			return -1;
 		}
 	}
+	free(olduser);
 
 	if (write(fd, cred_buf, cred_len) != cred_len) {
 		perror("write failed");
