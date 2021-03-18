@@ -339,6 +339,7 @@ cd build
 %if %{with alps}
 	--enable-alps \
 %endif
+	--host=none \
 %if %{with pmix}
 	--with-pmix \
 %endif

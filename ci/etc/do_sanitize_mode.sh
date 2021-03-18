@@ -47,6 +47,13 @@ rpmdev-setuptree
 yum -y install python3-pip sudo which net-tools man-db time.x86_64
 dnf install -y dnf-plugins-core
 dnf config-manager --set-enabled powertools
+dnf install -y gcc make rpm-build libtool hwloc-devel \
+      libX11-devel libXt-devel libedit-devel libical-devel \
+      ncurses-devel perl postgresql-devel postgresql-contrib python3-devel tcl-devel \
+      tk-devel swig expat-devel openssl-devel libXext libXft \
+      autoconf automake gcc-c++
+yum install -y expat libedit postgresql-server postgresql-contrib python3 \
+      sendmail sudo tcl tk libical
 if [ ! -f /tmp/swig/swig/configure ]; then
        # source install swig
        dnf -y install gcc-c++ byacc pcre-devel
