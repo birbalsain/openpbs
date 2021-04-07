@@ -154,7 +154,7 @@ class TestMultiNodeJobsRestart(TestFunctional):
 
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
 
-        sleep(55)
+        sleep(300)
 
         self.server.log_match("%s;Exit_status=0" % jid)
 
