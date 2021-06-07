@@ -435,7 +435,8 @@ class PBSTestSuite(unittest.TestCase):
     scheds = {}
     moms = None
     comms = None
-
+    fairshare = Fairshare
+ 
     @classmethod
     def setUpClass(cls):
         cls.log_enter_setup(True)

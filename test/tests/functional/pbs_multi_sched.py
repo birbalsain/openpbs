@@ -696,25 +696,81 @@ class TestMultipleSchedulers(TestFunctional):
 
         self.scheds['default'].add_to_resource_group(TEST_USER, 10, 'root',
                                                      default_shares)
-        self.scheds['default'].set_fairshare_usage(TEST_USER, default_usage)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            default_usage,
+            self.scheds['default'].has_snap,
+            self.scheds['default'].pbs_conf,
+            self.scheds['default'].sc_name,
+            self.scheds['default'].hostname,
+            self.scheds['default'].user)
 
         self.scheds['sc1'].add_to_resource_group(TEST_USER, 10, 'root',
                                                  sc1_shares)
-        self.scheds['sc1'].set_fairshare_usage(TEST_USER, sc1_usage)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            sc1_usage,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].user)
 
         self.scheds['sc2'].add_to_resource_group(TEST_USER, 10, 'root',
                                                  sc2_shares)
-        self.scheds['sc2'].set_fairshare_usage(TEST_USER, sc2_usage)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            sc2_usage,
+            self.scheds['sc2'].has_snap,
+            self.scheds['sc2'].pbs_conf,
+            self.scheds['sc2'].sc_name,
+            self.scheds['sc2'].hostname,
+            self.scheds['sc2'].user)
 
         self.scheds['sc3'].add_to_resource_group(TEST_USER, 10, 'root',
                                                  sc3_shares)
-        self.scheds['sc3'].set_fairshare_usage(TEST_USER, sc3_usage)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            sc3_usage,
+            self.scheds['sc3'].has_snap,
+            self.scheds['sc3'].pbs_conf,
+            self.scheds['sc3'].sc_name,
+            self.scheds['sc3'].hostname,
+            self.scheds['sc3'].user)
 
         # requery fairshare info from pbsfs
-        default_fs = self.scheds['default'].query_fairshare()
-        sc1_fs = self.scheds['sc1'].query_fairshare()
-        sc2_fs = self.scheds['sc2'].query_fairshare()
-        sc3_fs = self.scheds['sc3'].query_fairshare()
+        default_fs = self.fairshare.query_fairshare(
+            None,
+            None,
+            self.scheds['default'].has_snap,
+            self.scheds['default'].pbs_conf,
+            self.scheds['default'].sc_name,
+            self.scheds['default'].hostname,
+            self.scheds['default'].fs_tag)
+        sc1_fs = self.fairshare.query_fairshare(
+            None,
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
+        sc2_fs = self.fairshare.query_fairshare(
+            None,
+            None,
+            self.scheds['sc2'].has_snap,
+            self.scheds['sc2'].pbs_conf,
+            self.scheds['sc2'].sc_name,
+            self.scheds['sc2'].hostname,
+            self.scheds['sc2'].fs_tag)
+        sc3_fs = self.fairshare.query_fairshare(
+            None,
+            None,
+            self.scheds['sc3'].has_snap,
+            self.scheds['sc3'].pbs_conf,
+            self.scheds['sc3'].sc_name,
+            self.scheds['sc3'].hostname,
+            self.scheds['sc3'].fs_tag)
 
         n = default_fs.get_node(id=10)
         self.assertEqual(n.nshares, default_shares)
@@ -807,13 +863,41 @@ class TestMultipleSchedulers(TestFunctional):
         # deleting the currently running job
         self.server.delete(sc1_jid2, wait=True)
         # query fairshare and check usage
-        sc1_fs_user1 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER1))
+        sc1_fs_user1 = self.fairshare.query_fairshare(
+            str(TEST_USER1),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user1.usage, 101)
-        sc1_fs_user2 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER2))
+        sc1_fs_user2 = self.fairshare.query_fairshare(
+            str(TEST_USER2),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user2.usage, 101)
-        sc1_fs_user3 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER3))
+        sc1_fs_user3 = self.fairshare.query_fairshare(
+            str(TEST_USER3),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user3.usage, 101)
-        sc1_fs_user4 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER4))
+        sc1_fs_user4 = self.fairshare.query_fairshare(
+            str(TEST_USER4),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user4.usage, 1)
         # Restart the scheduler
         t = time.time()
@@ -858,13 +942,41 @@ class TestMultipleSchedulers(TestFunctional):
         # deleting the currently running job
         self.server.delete(sc1_jid2, wait=True)
         # query fairshare and check usage
-        sc1_fs_user1 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER1))
+        sc1_fs_user1 = self.fairshare.query_fairshare(
+            str(TEST_USER1),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user1.usage, 201)
-        sc1_fs_user2 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER2))
+        sc1_fs_user2 = self.fairshare.query_fairshare(
+            str(TEST_USER2),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user2.usage, 201)
-        sc1_fs_user3 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER3))
+        sc1_fs_user3 = self.fairshare.query_fairshare(
+            str(TEST_USER3),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user3.usage, 101)
-        sc1_fs_user4 = self.scheds['sc1'].query_fairshare(name=str(TEST_USER4))
+        sc1_fs_user4 = self.fairshare.query_fairshare(
+            str(TEST_USER4),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag)
         self.assertEqual(sc1_fs_user4.usage, 101)
 
     def test_sched_priv_change(self):
@@ -913,7 +1025,12 @@ class TestMultipleSchedulers(TestFunctional):
         """
         self.setup_sc3()
         self.scheds['sc3'].add_to_resource_group(TEST_USER, 10, 'root', 20)
-        self.scheds['sc3'].set_fairshare_usage(name=TEST_USER, usage=10)
+        self.fairshare.set_fairshare_usage(TEST_USER, 10,
+                                           self.scheds['sc3'].has_snap,
+                                           self.scheds['sc3'].pbs_conf,
+                                           self.scheds['sc3'].sc_name,
+                                           self.scheds['sc3'].hostname,
+                                           self.scheds['sc3'].user)
         self.scheds['sc3'].decay_fairshare_tree()
         n = self.scheds['sc3'].fairshare_tree.get_node(id=10)
         self.assertTrue(n.usage, 5)
@@ -924,11 +1041,27 @@ class TestMultipleSchedulers(TestFunctional):
         """
         self.setup_sc3()
         self.scheds['sc3'].add_to_resource_group(TEST_USER, 10, 'root', 20)
-        self.scheds['sc3'].set_fairshare_usage(name=TEST_USER, usage=10)
+        self.fairshare.set_fairshare_usage(TEST_USER, 10,
+                                           self.scheds['sc3'].has_snap,
+                                           self.scheds['sc3'].pbs_conf,
+                                           self.scheds['sc3'].sc_name,
+                                           self.scheds['sc3'].hostname,
+                                           self.scheds['sc3'].user)
         self.scheds['sc3'].add_to_resource_group(TEST_USER2, 20, 'root', 20)
-        self.scheds['sc3'].set_fairshare_usage(name=TEST_USER2, usage=100)
+        self.fairshare.set_fairshare_usage(TEST_USER2, 100,
+                                           self.scheds['sc3'].has_snap,
+                                           self.scheds['sc3'].pbs_conf,
+                                           self.scheds['sc3'].sc_name,
+                                           self.scheds['sc3'].hostname,
+                                           self.scheds['sc3'].user)
 
-        user = self.scheds['sc3'].cmp_fairshare_entities(TEST_USER, TEST_USER2)
+        user = self.scheds['sc3'].cmp_fairshare_entities(
+            TEST_USER,
+            TEST_USER2,
+            self.scheds['sc3'].has_snap,
+            self.scheds['sc3'].pbs_conf,
+            self.scheds['sc3'].hostname,
+            self.scheds['sc3'].user)
         self.assertEqual(user, str(TEST_USER))
 
     def test_pbsfs_invalid_sched(self):
@@ -954,7 +1087,14 @@ class TestMultipleSchedulers(TestFunctional):
         try:
             # Only a scheduler object is created. Corresponding sched_priv
             # dir not created yet. Try to query fairshare data.
-            self.scheds['sc5'].query_fairshare()
+            self.fairshare.query_fairshare(
+                None,
+                None,
+                self.scheds['sc5'].has_snap,
+                self.scheds['sc5'].pbs_conf,
+                self.scheds['sc5'].sc_name,
+                self.scheds['sc5'].hostname,
+                self.scheds['sc5'].fs_tag)
         except PbsFairshareError as e:
             self.assertTrue(err_msg in e.msg)
 
@@ -964,12 +1104,33 @@ class TestMultipleSchedulers(TestFunctional):
         """
         self.setup_sc1()
         self.scheds['sc1'].add_to_resource_group(TEST_USER, 20, 'root', 50)
-        self.scheds['sc1'].set_fairshare_usage(name=TEST_USER, usage=25)
-        n = self.scheds['sc1'].query_fairshare().get_node(name=str(TEST_USER))
+        self.fairshare.set_fairshare_usage(TEST_USER, 25,
+                                           self.scheds['sc1'].has_snap,
+                                           self.scheds['sc1'].pbs_conf,
+                                           self.scheds['sc1'].sc_name,
+                                           self.scheds['sc1'].hostname,
+                                           self.scheds['sc1'].user)
+        n = self.fairshare.query_fairshare(
+            str(TEST_USER),
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag).get_node(
+            name=str(TEST_USER))
         self.assertTrue(n.usage, 25)
 
         self.server.restart()
-        n = self.scheds['sc1'].query_fairshare().get_node(name=str(TEST_USER))
+        n = self.fairshare.query_fairshare(
+            None,
+            None,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].fs_tag).get_node(
+            name=str(TEST_USER))
         self.assertTrue(n.usage, 25)
 
     def test_pbsfs_revert_to_defaults(self):
@@ -993,7 +1154,14 @@ class TestMultipleSchedulers(TestFunctional):
         self.scheds['sc1'].add_to_resource_group(TEST_USER1,
                                                  12, 'root', 10)
         self.scheds['sc1'].set_sched_config({'fair_share': 'True'})
-        self.scheds['sc1'].set_fairshare_usage(TEST_USER, 100)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            100,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].user)
 
         self.server.manager(MGR_CMD_SET, SCHED, {'scheduling': 'False'},
                             id='sc1')
@@ -1032,7 +1200,14 @@ class TestMultipleSchedulers(TestFunctional):
         self.scheds['sc1'].add_to_resource_group(TEST_USER1,
                                                  16, 'root', 10)
         self.scheds['sc1'].set_sched_config({'fair_share': 'True'})
-        self.scheds['sc1'].set_fairshare_usage(TEST_USER1, 50)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER1,
+            50,
+            self.scheds['sc1'].has_snap,
+            self.scheds['sc1'].pbs_conf,
+            self.scheds['sc1'].sc_name,
+            self.scheds['sc1'].hostname,
+            self.scheds['sc1'].user)
 
         self.server.manager(MGR_CMD_SET, SCHED, {'scheduling': 'False'},
                             id='sc1')
@@ -1237,7 +1412,7 @@ class TestMultipleSchedulers(TestFunctional):
         self.server.expect(JOB, msg, id=jid_1)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid_2)
 
-    @staticmethod
+    @ staticmethod
     def cust_attr(name, totnodes, numnode, attrib):
         a = {}
         if numnode in range(0, 3):
@@ -1540,8 +1715,8 @@ class TestMultipleSchedulers(TestFunctional):
                             id="sc3")
         try:
             # get the number of open files per process
-            (open_files_soft_limit, open_files_hard_limit) = \
-                resource.getrlimit(resource.RLIMIT_NOFILE)
+            (open_files_soft_limit, open_files_hard_limit) = resource.getrlimit(
+                resource.RLIMIT_NOFILE)
 
             # set the soft limit of number of open files per process to 10
             resource.setrlimit(resource.RLIMIT_NOFILE,

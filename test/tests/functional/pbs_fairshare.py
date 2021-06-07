@@ -59,9 +59,30 @@ class TestFairshare(TestFunctional):
         self.scheduler.add_to_resource_group(TEST_USER1, 12, 'group1', 50)
         self.scheduler.add_to_resource_group(TEST_USER2, 21, 'group2', 60)
         self.scheduler.add_to_resource_group(TEST_USER3, 22, 'group2', 40)
-        self.scheduler.set_fairshare_usage(TEST_USER, 100)
-        self.scheduler.set_fairshare_usage(TEST_USER1, 100)
-        self.scheduler.set_fairshare_usage(TEST_USER3, 1000)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            100,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER1,
+            100,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER3,
+            1000,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
 
     def test_formula_keyword(self):
         """
@@ -309,7 +330,14 @@ class TestFairshare(TestFunctional):
         self.scheduler.add_to_resource_group(TEST_USER1, 12, 'root', 10)
         self.scheduler.set_sched_config({'fair_share': 'True'})
 
-        self.scheduler.set_fairshare_usage(TEST_USER, 100)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            100,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
 
         self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'False'})
         J1 = Job(TEST_USER)
@@ -340,7 +368,14 @@ class TestFairshare(TestFunctional):
         self.scheduler.add_to_resource_group(TEST_USER1, 12, 'root', 10)
         self.scheduler.set_sched_config({'fair_share': 'True'})
 
-        self.scheduler.set_fairshare_usage(TEST_USER1, 50)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER1,
+            50,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
 
         J3 = Job(TEST_USER)
         jid3 = self.server.submit(J3)
@@ -361,7 +396,14 @@ class TestFairshare(TestFunctional):
         self.scheduler.set_sched_config({'fair_share': 'True'})
         self.server.manager(MGR_CMD_SET, SCHED, {'log_events': 4095})
         self.scheduler.add_to_resource_group(TEST_USER, 10, 'root', 50)
-        self.scheduler.set_fairshare_usage(TEST_USER, 1)
+        self.fairshare.set_fairshare_usage(
+            TEST_USER,
+            1,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
         self.scheduler.set_sched_config({"fairshare_decay_time": "00:00:02"})
         self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'True'})
         self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'False'})
@@ -373,7 +415,12 @@ class TestFairshare(TestFunctional):
         self.scheduler.log_match("Decaying Fairshare Tree", starttime=t)
 
         # Check that TEST_USER's usage is 1
-        fs = self.scheduler.query_fairshare(name=str(TEST_USER))
+        fs = self.fairshare.query_fairshare(str(TEST_USER), None,
+                                            self.scheduler.has_snap,
+                                            self.scheduler.pbs_conf,
+                                            self.scheduler.sc_name,
+                                            self.scheduler.hostname,
+                                            self.scheduler.fs_tag)
         fs_usage = int(fs.usage)
         self.assertEqual(fs_usage, 1,
                          "Fairshare usage %d not equal to 1" % fs_usage)
@@ -425,9 +472,23 @@ class TestFairshare(TestFunctional):
         self.scheduler.set_sched_config({'fairshare_entity': ATTR_A})
 
         self.scheduler.add_to_resource_group('acctA', 11, 'root', 10)
-        self.scheduler.set_fairshare_usage('acctA', 1)
+        self.fairshare.set_fairshare_usage(
+            'acctA',
+            1,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
         self.scheduler.add_to_resource_group('acctB', 12, 'root', 25)
-        self.scheduler.set_fairshare_usage('acctB', 1)
+        self.fairshare.set_fairshare_usage(
+            'acctB',
+            1,
+            self.scheduler.has_snap,
+            self.scheduler.pbs_conf,
+            self.scheduler.sc_name,
+            self.scheduler.hostname,
+            self.scheduler.user)
 
         self.server.manager(MGR_CMD_SET, SCHED, {'scheduling': False})
         self.server.manager(MGR_CMD_SET, NODE,
