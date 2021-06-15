@@ -961,7 +961,7 @@ class DshUtils(object):
 
             try:
                 p = Popen(runcmd, bufsize=-1, stdin=stdin, stdout=stdout,
-                          stderr=stderr, cwd=cwd, env=env)
+                          stderr=stderr, cwd=cwd, env=env, close_fds=True)
             except Exception as e:
                 self.logger.error("Error running command " + str(runcmd))
                 if as_script:
